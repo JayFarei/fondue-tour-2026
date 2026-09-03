@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Fondue Tour 2026" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata><name>Sat 12 · Valbella to Ascona · from Hotel Ascona</name><desc>Fondue Tour 2026 roadbook route. Verify live pass status before departure.</desc></metadata>
+  <rte>
+    <name>Sat 12 · Valbella to Ascona · from Hotel Ascona stops</name>
+    <rtept lat="46.1593333" lon="8.7694379"><name>Hotel Ascona</name></rtept>
+  </rte>
+  <trk>
+    <name>Sat 12 · Valbella to Ascona · from Hotel Ascona</name>
+    <trkseg>
+      <trkpt lat="46.159382" lon="8.769259" />
+    </trkseg>
+  </trk>
+</gpx>

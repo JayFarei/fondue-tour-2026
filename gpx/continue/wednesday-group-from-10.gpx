@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Fondue Tour 2026" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata><name>Wed 09 · Group · Val Cenis to La Thuile · from Chalet Eden · La Thuile</name><desc>Fondue Tour 2026 roadbook route. Verify live pass status before departure.</desc></metadata>
+  <rte>
+    <name>Wed 09 · Group · Val Cenis to La Thuile · from Chalet Eden · La Thuile stops</name>
+    <rtept lat="45.7081906" lon="6.9511927"><name>Chalet Eden · La Thuile</name></rtept>
+  </rte>
+  <trk>
+    <name>Wed 09 · Group · Val Cenis to La Thuile · from Chalet Eden · La Thuile</name>
+    <trkseg>
+      <trkpt lat="45.7083" lon="6.951439" />
+    </trkseg>
+  </trk>
+</gpx>

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Fondue Tour 2026" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata><name>Fri 11 · Short · Gelmerbahn to Valbella via Albula · from Migrol Lantsch/Lenz</name><desc>Fondue Tour 2026 roadbook route. Verify live pass status before departure.</desc></metadata>
+  <rte>
+    <name>Fri 11 · Short · Gelmerbahn to Valbella via Albula · from Migrol Lantsch/Lenz stops</name>
+    <rtept lat="46.6896395" lon="9.5619604"><name>Migrol Lantsch/Lenz</name></rtept>
+    <rtept lat="46.7445648" lon="9.5555085"><name>Hotel Waldhaus am See</name></rtept>
+  </rte>
+  <trk>
+    <name>Fri 11 · Short · Gelmerbahn to Valbella via Albula · from Migrol Lantsch/Lenz</name>
+    <trkseg>
+      <trkpt lat="46.689728" lon="9.561951" />
+      <trkpt lat="46.689901" lon="9.561966" />
+      <trkpt lat="46.692354" lon="9.560008" />
+      <trkpt lat="46.698598" lon="9.557849" />
+      <trkpt lat="46.705839" lon="9.560397" />
+      <trkpt lat="46.70933" lon="9.559154" />
+      <trkpt lat="46.713567" lon="9.559608" />
+      <trkpt lat="46.714692" lon="9.558775" />
+      <trkpt lat="46.718523" lon="9.559192" />
+      <trkpt lat="46.719486" lon="9.558754" />
+      <trkpt lat="46.721342" lon="9.558672" />
+      <trkpt lat="46.72249" lon="9.558904" />
+      <trkpt lat="46.723035" lon="9.558688" />
+      <trkpt lat="46.724061" lon="9.557944" />
+      <trkpt lat="46.725934" lon="9.557687" />
+      <trkpt lat="46.726854" lon="9.55785" />
+      <trkpt lat="46.727601" lon="9.557781" />
+      <trkpt lat="46.728385" lon="9.557618" />
+      <trkpt lat="46.729218" lon="9.557207" />
+      <trkpt lat="46.729876" lon="9.556523" />
+      <trkpt lat="46.731539" lon="9.553898" />
+      <trkpt lat="46.732406" lon="9.553273" />
+      <trkpt lat="46.733209" lon="9.552449" />
+      <trkpt lat="46.73428" lon="9.551844" />
+      <trkpt lat="46.734976" lon="9.552203" />
+      <trkpt lat="46.735608" lon="9.552203" />
+      <trkpt lat="46.73792" lon="9.553012" />
+      <trkpt lat="46.738851" lon="9.552927" />
+      <trkpt lat="46.739132" lon="9.553051" />
+      <trkpt lat="46.739402" lon="9.553734" />
+      <trkpt lat="46.739246" lon="9.555393" />
+      <trkpt lat="46.739426" lon="9.555794" />
+      <trkpt lat="46.739723" lon="9.556026" />
+      <trkpt lat="46.740085" lon="9.556002" />
+      <trkpt lat="46.741071" lon="9.55545" />
+      <trkpt lat="46.741499" lon="9.555456" />
+      <trkpt lat="46.743083" lon="9.556039" />
+      <trkpt lat="46.744089" lon="9.556725" />
+      <trkpt lat="46.744754" lon="9.556418" />
+      <trkpt lat="46.74468" lon="9.55559" />
+    </trkseg>
+  </trk>
+</gpx>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Fondue Tour 2026" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata><name>Thu 10 · La Thuile to the Furka–Tremola loop · from Hotel Landhaus</name><desc>Fondue Tour 2026 roadbook route. Verify live pass status before departure.</desc></metadata>
+  <rte>
+    <name>Thu 10 · La Thuile to the Furka–Tremola loop · from Hotel Landhaus stops</name>
+    <rtept lat="46.4879271" lon="8.268457"><name>Hotel Landhaus</name></rtept>
+  </rte>
+  <trk>
+    <name>Thu 10 · La Thuile to the Furka–Tremola loop · from Hotel Landhaus</name>
+    <trkseg>
+      <trkpt lat="46.487794" lon="8.26852" />
+    </trkseg>
+  </trk>
+</gpx>

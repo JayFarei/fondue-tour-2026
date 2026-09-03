@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Fondue Tour 2026" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata><name>Tue 08 · Warm-up · Menton to Val Cenis · from Saint Charles · Val Cenis</name><desc>Fondue Tour 2026 roadbook route. Verify live pass status before departure.</desc></metadata>
+  <rte>
+    <name>Tue 08 · Warm-up · Menton to Val Cenis · from Saint Charles · Val Cenis stops</name>
+    <rtept lat="45.2849656" lon="6.8850567"><name>Saint Charles · Val Cenis</name></rtept>
+  </rte>
+  <trk>
+    <name>Tue 08 · Warm-up · Menton to Val Cenis · from Saint Charles · Val Cenis</name>
+    <trkseg>
+      <trkpt lat="45.285056" lon="6.885036" />
+    </trkseg>
+  </trk>
+</gpx>

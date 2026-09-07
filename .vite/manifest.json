@@ -1,0 +1,117 @@
+{
+  "_Icon-U6bDhdkN.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/Icon-U6bDhdkN.js",
+    "name": "Icon",
+    "imports": [
+      "_rolldown-runtime-CeJgAe7x.js",
+      "_framework-CcaMQPWE.js"
+    ]
+  },
+  "_framework-CcaMQPWE.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/framework-CcaMQPWE.js",
+    "name": "framework",
+    "imports": [
+      "_rolldown-runtime-CeJgAe7x.js"
+    ]
+  },
+  "_rolldown-runtime-CeJgAe7x.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/rolldown-runtime-CeJgAe7x.js",
+    "name": "rolldown-runtime"
+  },
+  "components/stop-weather.tsx": {
+    "file": "fondue-tour-2026/_next/static/chunks/stop-weather-B1SErIo3.js",
+    "name": "stop-weather",
+    "src": "components/stop-weather.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-CeJgAe7x.js",
+      "_Icon-U6bDhdkN.js",
+      "_framework-CcaMQPWE.js"
+    ]
+  },
+  "components/tour-map.tsx": {
+    "file": "fondue-tour-2026/_next/static/chunks/tour-map-DC0NJorS.js",
+    "name": "tour-map",
+    "src": "components/tour-map.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-CeJgAe7x.js",
+      "virtual:vinext-app-browser-entry",
+      "components/stop-weather.tsx",
+      "_framework-CcaMQPWE.js"
+    ],
+    "dynamicImports": [
+      "node_modules/leaflet/dist/leaflet-src.js"
+    ]
+  },
+  "node_modules/leaflet/dist/leaflet-src.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/leaflet-src-DgHqWwIR.js",
+    "name": "leaflet-src",
+    "src": "node_modules/leaflet/dist/leaflet-src.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-CeJgAe7x.js"
+    ]
+  },
+  "node_modules/vinext/dist/shims/image.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/image-BfLC7QDL.js",
+    "name": "image",
+    "src": "node_modules/vinext/dist/shims/image.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-CeJgAe7x.js",
+      "virtual:vinext-app-browser-entry",
+      "_framework-CcaMQPWE.js"
+    ]
+  },
+  "node_modules/vinext/dist/shims/internal/app-route-prefetch-policy.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/app-route-prefetch-policy-CFFygNk_.js",
+    "name": "app-route-prefetch-policy",
+    "src": "node_modules/vinext/dist/shims/internal/app-route-prefetch-policy.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "virtual:vinext-app-browser-entry"
+    ]
+  },
+  "node_modules/vinext/dist/shims/layout-segment-context.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/layout-segment-context-DBPLPxkC.js",
+    "name": "layout-segment-context",
+    "src": "node_modules/vinext/dist/shims/layout-segment-context.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-CeJgAe7x.js",
+      "virtual:vinext-app-browser-entry",
+      "_framework-CcaMQPWE.js"
+    ]
+  },
+  "node_modules/vinext/dist/shims/streamed-icons.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/streamed-icons-4hRnRg2K.js",
+    "name": "streamed-icons",
+    "src": "node_modules/vinext/dist/shims/streamed-icons.js",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-CeJgAe7x.js",
+      "_framework-CcaMQPWE.js"
+    ]
+  },
+  "virtual:vinext-app-browser-entry": {
+    "file": "fondue-tour-2026/_next/static/chunks/index-DoN1KbSc.js",
+    "name": "index",
+    "src": "virtual:vinext-app-browser-entry",
+    "isEntry": true,
+    "imports": [
+      "_rolldown-runtime-CeJgAe7x.js",
+      "_framework-CcaMQPWE.js"
+    ],
+    "dynamicImports": [
+      "node_modules/vinext/dist/shims/internal/app-route-prefetch-policy.js",
+      "components/tour-map.tsx",
+      "virtual:vinext-app-browser-entry",
+      "node_modules/vinext/dist/shims/layout-segment-context.js",
+      "components/stop-weather.tsx",
+      "_Icon-U6bDhdkN.js",
+      "node_modules/vinext/dist/shims/streamed-icons.js",
+      "node_modules/vinext/dist/shims/image.js"
+    ]
+  }
+}

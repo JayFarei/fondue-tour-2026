@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Fondue Tour 2026" xmlns="http://www.topografix.com/GPX/1/1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd">
+  <metadata><name>Fri 11 · Short · Gelmerbahn to Valbella via Albula · from Hotel Waldhaus am See</name><desc>Fondue Tour 2026 roadbook route. Verify live pass status before departure.</desc></metadata>
+  <rte>
+    <name>Fri 11 · Short · Gelmerbahn to Valbella via Albula · from Hotel Waldhaus am See stops</name>
+    <rtept lat="46.7445648" lon="9.5555085"><name>Hotel Waldhaus am See</name></rtept>
+  </rte>
+  <trk>
+    <name>Fri 11 · Short · Gelmerbahn to Valbella via Albula · from Hotel Waldhaus am See</name>
+    <trkseg>
+      <trkpt lat="46.74468" lon="9.55559" />
+    </trkseg>
+  </trk>
+</gpx>

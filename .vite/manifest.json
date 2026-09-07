@@ -19,7 +19,7 @@
     "name": "rolldown-runtime"
   },
   "components/profile-weather.tsx": {
-    "file": "fondue-tour-2026/_next/static/chunks/profile-weather-YDy9-DJF.js",
+    "file": "fondue-tour-2026/_next/static/chunks/profile-weather-ChrJfj2d.js",
     "name": "profile-weather",
     "src": "components/profile-weather.tsx",
     "isDynamicEntry": true,
@@ -30,7 +30,7 @@
     ]
   },
   "components/stop-weather.tsx": {
-    "file": "fondue-tour-2026/_next/static/chunks/stop-weather-svVEW1hT.js",
+    "file": "fondue-tour-2026/_next/static/chunks/stop-weather-Kpf9tW52.js",
     "name": "stop-weather",
     "src": "components/stop-weather.tsx",
     "isDynamicEntry": true,
@@ -41,7 +41,7 @@
     ]
   },
   "components/tour-map.tsx": {
-    "file": "fondue-tour-2026/_next/static/chunks/tour-map-Bk5ZyQC-.js",
+    "file": "fondue-tour-2026/_next/static/chunks/tour-map-aUEP_JWx.js",
     "name": "tour-map",
     "src": "components/tour-map.tsx",
     "isDynamicEntry": true,
@@ -65,7 +65,7 @@
     ]
   },
   "node_modules/vinext/dist/shims/image.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/image-CNcwA6TN.js",
+    "file": "fondue-tour-2026/_next/static/chunks/image-sv12vKQe.js",
     "name": "image",
     "src": "node_modules/vinext/dist/shims/image.js",
     "isDynamicEntry": true,
@@ -76,7 +76,7 @@
     ]
   },
   "node_modules/vinext/dist/shims/internal/app-route-prefetch-policy.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/app-route-prefetch-policy-r2YJmcv_.js",
+    "file": "fondue-tour-2026/_next/static/chunks/app-route-prefetch-policy-yS-xOc_R.js",
     "name": "app-route-prefetch-policy",
     "src": "node_modules/vinext/dist/shims/internal/app-route-prefetch-policy.js",
     "isDynamicEntry": true,
@@ -85,7 +85,7 @@
     ]
   },
   "node_modules/vinext/dist/shims/layout-segment-context.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/layout-segment-context-Cj1JW1Vq.js",
+    "file": "fondue-tour-2026/_next/static/chunks/layout-segment-context-hx_VBdS7.js",
     "name": "layout-segment-context",
     "src": "node_modules/vinext/dist/shims/layout-segment-context.js",
     "isDynamicEntry": true,
@@ -106,7 +106,7 @@
     ]
   },
   "virtual:vinext-app-browser-entry": {
-    "file": "fondue-tour-2026/_next/static/chunks/index-DQdLHjsd.js",
+    "file": "fondue-tour-2026/_next/static/chunks/index-DbLGoH9w.js",
     "name": "index",
     "src": "virtual:vinext-app-browser-entry",
     "isEntry": true,

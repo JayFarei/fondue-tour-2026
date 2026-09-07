@@ -2,8 +2,8 @@
 
 /* eslint-disable jsx-a11y/prefer-tag-over-role */
 // SVG stop groups use explicit button roles for keyboard access.
-import { useState } from 'react';
-import { ArrowRight, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowRight, X } from 'lucide-react';
 import elevation from '@/data/tour-elevation.json';
 import stops from '@/data/profile-stops.json';
 import { conditionIcon, useWeather } from '@/components/stop-weather';
@@ -32,6 +32,27 @@ const degrees = (v: number) => `${Math.round(v)}°`;
 export function ProfileWeather() {
   const { data, loading, fetchedAt } = useWeather();
   const [selected, setSelected] = useState<number | null>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const [scrollLeft, setScrollLeft] = useState(0);
+  const [viewportWidth, setViewportWidth] = useState(0);
+  useEffect(() => {
+    const element = scroller.current;
+    if (!element) return;
+    const observer = new ResizeObserver(() => setViewportWidth(element.clientWidth));
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const maxScroll = Math.max(0, WIDTH + 68 - viewportWidth);
+  // Merge destinations clamped to the same end position on wider screens.
+  const destinations = elevation.legs.map((leg, i) => ({
+    label: leg.label.split(' · ')[0],
+    color: leg.color,
+    left: i === 0 ? 0 : Math.min(maxScroll, x(leg.startKm)),
+  })).filter((point, i, all) => i === 0 || point.left > all[i - 1].left + 1);
+  const current = destinations.reduce((index, point, i) => scrollLeft >= point.left - 3 ? i : index, 0);
+  const next = destinations[current + 1];
+  const previous = destinations[Math.max(0, current - 1)];
+  const jump = (left: number) => scroller.current?.scrollTo({ left, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   const readings = stops.map((stop) => {
     const date = routeDate(stop.day);
     const forecast = data[`${date}/${weatherKey(stop)}`];
@@ -53,7 +74,11 @@ export function ProfileWeather() {
         <p className="journey-scroll-hint"><ArrowRight size={18} aria-hidden="true" /> Swipe / scroll right through the road trip</p>
       </div>
       <div className="journey-window">
-        <div className="journey-scroll" role="group" aria-label="Scrollable elevation, temperature, conditions and precipitation chart">
+        <div className="journey-chart-nav" aria-label="Chart day navigation" style={{ backgroundColor: `color-mix(in srgb, ${next?.color ?? elevation.legs.at(-1)!.color} 16%, var(--cream))`, color: next?.color ?? elevation.legs.at(-1)!.color }}>
+          <button type="button" className="journey-previous" aria-label="Previous day in chart" disabled={scrollLeft < 3} onClick={() => jump(previous.left)}><ArrowLeft size={16} /></button>
+          {next ? <button type="button" className="journey-next-preview" aria-label={`Next day: ${next.label}`} title={`Scroll to ${next.label}`} onClick={() => jump(next.left)}><span>{next.label}</span><ArrowRight size={14} /></button> : <span className="journey-route-end">Lugano</span>}
+        </div>
+        <div className="journey-scroll" ref={scroller} onScroll={(event) => setScrollLeft(event.currentTarget.scrollLeft)} role="group" aria-label="Scrollable elevation, temperature, conditions and precipitation chart">
           <svg className="journey-axis" width="68" height={HEIGHT} viewBox={`0 0 68 ${HEIGHT}`} aria-label="Pinned elevation and temperature scales">
             <text x="8" y="24" className="journey-axis-title">ROUTE</text>
             <text x="8" y="134" className="journey-axis-title">METRES</text>

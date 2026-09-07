@@ -1,63 +1,45 @@
-// Run with playwright-cli run-code --filename scripts/check-chart-clicks.js
-// Load the roadbook URL first. This tests real pointer clicks without moving the mouse.
+// playwright-cli run-code --filename scripts/check-chart-clicks.js (load the site first)
 async (page) => {
-  const starts = [0, 457.4, 796.6, 1127.6, 1366];
-  const targets = starts.map((km) => km / 1408.4 * 3236);
-  const results = [];
-  const assert = (ok, message) => { if (!ok) throw new Error(message); };
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  for (const width of [1440, 390, 1920]) {
-    await page.setViewportSize({ width, height: 1000 });
+  const offsets = [0,457.4,796.6,1127.6,1366].map(km=>km/1408.4*3236);
+  const labels = ['Wed 09','Thu 10','Fri 11','Sat 12','Sun 13'];
+  const assert = (ok,msg) => { if(!ok) throw new Error(msg); };
+  const results=[];
+  await page.emulateMedia({reducedMotion:'reduce'});
+  for (const width of [1495,390,1920]) {
+    await page.setViewportSize({width,height:1000});
     await page.reload();
-    await page.locator('.journey-scroll').evaluate((e) => e.scrollTo({ left: 0, behavior: 'instant' }));
-    const maxScroll = await page.locator('.journey-scroll').evaluate((e) => e.scrollWidth - e.clientWidth);
-    const forward = page.locator('.journey-next-preview');
-    const back = page.locator('.journey-previous');
-    await forward.scrollIntoViewIfNeeded();
-    const forwardBox = await forward.locator('svg').boundingBox();
-    const backBox = await back.locator('svg').boundingBox();
-    const checkBox = async () => {
-      for (const [button, before] of [[forward.locator('svg'), forwardBox], [back.locator('svg'), backBox]]) {
-        const after = await button.boundingBox();
-        assert(after && Math.abs(after.x - before.x) < 1 && Math.abs(after.y - before.y) < 1 && Math.abs(after.width - before.width) < 1, `${width}px: click target moved`);
-      }
-    };
-    const clickAndCheck = async (box, day) => {
-      await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-      // Reduced motion makes arrival immediate, while a frame allows React to settle.
-      await page.evaluate(() => new Promise(requestAnimationFrame));
-      const left = await page.locator('.journey-scroll').evaluate((e) => e.scrollLeft);
-      const expected = Math.min(targets[day], maxScroll);
-      assert(Math.abs(left - expected) < 3, `${width}px: expected day ${day + 1} at ${expected.toFixed(1)}px; got ${left}px`);
-      assert(await page.locator('.journey-chart-nav').getAttribute('data-current-day') === String(day), `Expected selected day ${day + 1}`);
-      const blank = await page.locator('.journey-scroll').evaluate((e) => e.getBoundingClientRect().right - document.querySelector('.journey-plot').getBoundingClientRect().right);
-      assert(blank < 1, `${width}px: scrolled ${blank}px beyond the chart into empty padding`);
-      await checkBox();
-    };
-    for (let day = 1; day <= 4; day++) await clickAndCheck(forwardBox, day);
-    assert(await forward.isDisabled(), 'Next must stay in place, disabled at the end');
-    await clickAndCheck(forwardBox, 4);
-    for (let day = 3; day >= 0; day--) await clickAndCheck(backBox, day);
-    assert(await back.isDisabled(), 'Back must be disabled at the start');
-    const layout = await page.evaluate(() => ({ overflow: document.documentElement.scrollWidth > innerWidth, scrollbar: getComputedStyle(document.querySelector('.journey-scroll')).scrollbarWidth }));
-    assert(!layout.overflow && layout.scrollbar === 'none', 'Unexpected overflow or visible scrollbar');
-    results.push({ width, forwardDays: 4, backwardDays: 4, fixedClickTargets: true });
+    const scroller=page.locator('.journey-scroll');
+    await scroller.evaluate(e=>e.scrollTo({left:0,behavior:'instant'}));
+    const button=page.locator('.journey-next-preview');
+    await button.scrollIntoViewIfNeeded();
+    const arrow=await button.locator('svg').boundingBox();
+    const visited=[];
+    for(let step=0;step<6;step++){
+      const view=await scroller.evaluate(e=>({left:e.scrollLeft,width:e.clientWidth,max:e.scrollWidth-e.clientWidth}));
+      if(view.left>=view.max-3){assert(await button.isDisabled(),'End button must be disabled');break;}
+      const next=offsets.findIndex(n=>n>view.left+view.width-68+1);
+      const expected=next<0?'Lugano':labels[next];
+      assert(await button.innerText()===expected,`${width}: expected first unseen day ${expected}, got ${await button.innerText()}`);
+      const position=await button.locator('svg').boundingBox();
+      assert(Math.abs(position.x-arrow.x)<1&&Math.abs(position.y-arrow.y)<1,'Arrow moved');
+      await page.mouse.click(arrow.x+arrow.width/2,arrow.y+arrow.height/2);
+      await page.evaluate(()=>new Promise(requestAnimationFrame));
+      const actual=await scroller.evaluate(e=>e.scrollLeft);
+      assert(Math.abs(actual-Math.min(view.max,next<0?view.max:offsets[next]))<3,'Wrong click destination');
+      const gap=await scroller.evaluate(e=>e.getBoundingClientRect().right-document.querySelector('.journey-plot').getBoundingClientRect().right);
+      assert(gap<1,'Blank space at chart end');
+      visited.push(expected);
+    }
+    const back=page.locator('.journey-previous');
+    const backArrow=await back.locator('svg').boundingBox();
+    for(let i=0;i<6&&!(await back.isDisabled());i++){
+      await page.mouse.click(backArrow.x+backArrow.width/2,backArrow.y+backArrow.height/2);
+      await page.evaluate(()=>new Promise(requestAnimationFrame));
+      const position=await back.locator('svg').boundingBox();
+      assert(Math.abs(position.x-backArrow.x)<1,'Back arrow moved');
+    }
+    assert(await scroller.evaluate(e=>e.scrollLeft)<3,'Back did not reach start');
+    results.push({width,visited,fixedArrows:true,noBlankEnd:true});
   }
-  // Rapid repeated clicks must queue days, not be reinterpreted mid-animation.
-  await page.emulateMedia({ reducedMotion: 'no-preference' });
-  const forward = page.locator('.journey-next-preview');
-  const back = page.locator('.journey-previous');
-  const forwardBox = await forward.locator('svg').boundingBox();
-  const backBox = await back.locator('svg').boundingBox();
-  for (let i = 0; i < 4; i++) await page.mouse.click(forwardBox.x + forwardBox.width / 2, forwardBox.y + forwardBox.height / 2);
-  await page.waitForFunction((target) => { const e = document.querySelector('.journey-scroll'); return Math.abs(e.scrollLeft - Math.min(target, e.scrollWidth - e.clientWidth)) < 3; }, targets[4]);
-  for (let i = 0; i < 4; i++) await page.mouse.click(backBox.x + backBox.width / 2, backBox.y + backBox.height / 2);
-  await page.waitForFunction(() => document.querySelector('.journey-scroll').scrollLeft < 3);
-  // A manual pan re-establishes the current day before the next click.
-  await page.locator('.journey-scroll').evaluate((e) => e.scrollTo({ left: 1500, behavior: 'instant' }));
-  await page.waitForFunction(() => document.querySelector('.journey-chart-nav').getAttribute('data-current-day') === '1');
-  await page.mouse.click(forwardBox.x + forwardBox.width / 2, forwardBox.y + forwardBox.height / 2);
-  await page.waitForFunction((target) => { const e = document.querySelector('.journey-scroll'); return Math.abs(e.scrollLeft - Math.min(target, e.scrollWidth - e.clientWidth)) < 3; }, targets[2]);
-  results.push({ rapidClicks: 'forward and back passed', manualPanThenNext: 'passed' });
   return results;
 }

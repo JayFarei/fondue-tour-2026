@@ -47,7 +47,11 @@ export function ProfileWeather() {
     return () => observer.disconnect();
   }, []);
   const maxScroll = Math.max(0, WIDTH + 68 - viewportWidth);
-  const nextLeg = elevation.legs[currentDay + 1];
+  const navigationLeft = pendingDay.current == null ? scrollLeft : Math.min(maxScroll, dayOffsets[pendingDay.current]);
+  const visibleRight = navigationLeft + viewportWidth - 68;
+  const nextIndex = viewportWidth ? dayOffsets.findIndex((offset) => offset > visibleRight + 1) : 1;
+  const nextLeg = nextIndex < 0 ? undefined : elevation.legs[nextIndex];
+  const canAdvance = navigationLeft < maxScroll - 3;
   const navigationColor = nextLeg?.color ?? elevation.legs.at(-1)!.color;
   const changeDay = (day: number) => {
     currentDayRef.current = day;
@@ -70,7 +74,7 @@ export function ProfileWeather() {
     trackScroll(element.scrollLeft);
   };
   const jump = (direction: number) => {
-    const day = Math.max(0, Math.min(elevation.legs.length - 1, currentDayRef.current + direction));
+    const day = direction > 0 ? (nextIndex < 0 ? elevation.legs.length - 1 : nextIndex) : Math.max(0, currentDayRef.current - 1);
     const target = Math.min(maxScroll, dayOffsets[day]);
     pendingDay.current = Math.abs((scroller.current?.scrollLeft ?? 0) - target) < 3 ? null : day;
     changeDay(day);
@@ -100,7 +104,7 @@ export function ProfileWeather() {
       <div className="journey-window">
         <div className="journey-chart-nav" data-current-day={currentDay} aria-label="Chart day navigation" style={{ backgroundColor: `color-mix(in srgb, ${navigationColor} 16%, var(--cream))`, color: navigationColor }}>
           <button type="button" className="journey-previous" aria-label="Previous day in chart" disabled={currentDay === 0 && scrollLeft < 3} onClick={() => jump(-1)}><ArrowLeft size={16} /></button>
-          <button type="button" className="journey-next-preview" disabled={!nextLeg} aria-label={nextLeg ? `Next day: ${nextLeg.label.split(' · ')[0]}` : 'End of route'} title={nextLeg ? `Scroll to ${nextLeg.label.split(' · ')[0]}` : 'End of route'} onClick={() => jump(1)}><span>{(nextLeg ?? elevation.legs[currentDay]).label.split(' · ')[0]}</span><ArrowRight size={14} /></button>
+          <button type="button" className="journey-next-preview" disabled={!canAdvance} aria-label={nextLeg ? `Next day: ${nextLeg.label.split(' · ')[0]}` : 'End of route'} title={nextLeg ? `Scroll to ${nextLeg.label.split(' · ')[0]}` : 'End of route'} onClick={() => jump(1)}><span>{nextLeg?.label.split(' · ')[0] ?? 'Lugano'}</span><ArrowRight size={14} /></button>
         </div>
         <div className="journey-scroll" ref={scroller} onScroll={(event) => trackScroll(event.currentTarget.scrollLeft)} onWheel={interruptPan} onTouchStart={interruptPan} role="group" aria-label="Scrollable elevation, temperature, conditions and precipitation chart">
           <svg className="journey-axis" style={{ boxShadow: scrollLeft < 1 ? 'none' : undefined }} width="68" height={HEIGHT} viewBox={`0 0 68 ${HEIGHT}`} aria-label="Pinned elevation and temperature scales">

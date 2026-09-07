@@ -3,12 +3,12 @@
 // SVG has no native button/group elements; explicit roles make its markers keyboard accessible.
 /* eslint-disable jsx-a11y/prefer-tag-over-role */
 
-import { useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRef, useState, type ReactNode } from 'react';
+import { ChevronLeft, ChevronRight, Droplets } from 'lucide-react';
 import elevation from '@/data/tour-elevation.json';
 import stops from '@/data/profile-stops.json';
 import { conditionIcon, StopWeather, useWeather } from '@/components/stop-weather';
-import { forecastAt, routeDate, weatherDescription, weatherEmoji, weatherKey } from '@/lib/weather';
+import { forecastAt, routeDate, weatherDescription, weatherKey } from '@/lib/weather';
 
 const x = (km: number) => 12 + km / elevation.totalKm * 1176;
 const degrees = (n: number) => `${Math.round(n)}°`;
@@ -19,6 +19,14 @@ const precipitationLabel = (reading: ReturnType<typeof forecastAt>) => reading
 export function ProfileWeather({ children }: { children: ReactNode }) {
   const { data, loading, fetchedAt } = useWeather();
   const [selected, setSelected] = useState(0);
+  const track = useRef<HTMLDivElement>(null);
+  function selectStop(index: number, reveal = false) {
+    setSelected(index);
+    if (reveal && track.current) {
+      const item = track.current.querySelector<HTMLElement>(`[data-stop="${index}"]`);
+      if (item) track.current.scrollTo({ left: item.offsetLeft - track.current.clientWidth / 2 + item.clientWidth / 2, behavior: 'smooth' });
+    }
+  }
   const readings = stops.map((stop) => {
     const date = routeDate(stop.day);
     const forecast = data[`${date}/${weatherKey(stop)}`];
@@ -73,31 +81,32 @@ export function ProfileWeather({ children }: { children: ReactNode }) {
       </div>
       <div className="profile-weather-panel mx-auto max-w-6xl px-5 sm:px-8">
         <div className="weather-glance-heading">
-          <h3>Conditions at a glance</h3>
+          <h3>Conditions along the route</h3>
           <div className="weather-day-picker" aria-label="Forecast day">
-            {elevation.legs.map((leg) => <button key={leg.id} type="button" aria-pressed={stop.leg === leg.id} onClick={() => setSelected(stops.findIndex((point) => point.leg === leg.id))}>{leg.label.split(' · ')[0]}</button>)}
+            {elevation.legs.map((leg) => <button key={leg.id} type="button" aria-pressed={stop.leg === leg.id} onClick={() => selectStop(stops.findIndex((point) => point.leg === leg.id), true)}>{leg.label.split(' · ')[0]}</button>)}
           </div>
         </div>
-        <p className="weather-glance-note">Stops in travel order · °C · 💧 precipitation chance and amount. Untimed stops: daily range, maximum hourly chance and day total.</p>
-        <div className="weather-glance-grid">
+        <p className="weather-glance-note">Swipe through the conditions, or jump to a day. Stops are evenly spaced here, in travel order; the chart above uses distance.</p>
+        <div className="conditions-track" ref={track} role="group" aria-label="Weather condition evolution across all 48 stops">
           {stops.map((point, i) => {
-            if (point.leg !== stop.leg) return null;
             const value = readings[i];
-            return <button key={point.id} type="button" className="weather-glance-stop" aria-pressed={selected === i} onClick={() => setSelected(i)}>
-              <span className="weather-glance-name">{point.name}</span>
-              <span className="weather-glance-time">{point.time || 'Daily forecast'}</span>
-              <span className="weather-glance-symbol"><span aria-hidden="true">{weatherEmoji(value?.code)}</span><strong>{value?.temperature != null ? degrees(value.temperature) : value?.low != null && value.high != null ? `${degrees(value.low)}–${degrees(value.high)}` : '—'}</strong></span>
-              <span className="weather-glance-condition">{value ? weatherDescription(value.code) : loading ? 'Loading…' : 'Unavailable'}</span>
-              <span className="weather-glance-rain">💧 {value?.rain != null ? `${Math.round(value.rain)}%${value.hour ? '' : ' max'}` : '—'}</span>
-              <span className="weather-glance-time">{value?.precipitation != null ? `${value.precipitation.toFixed(1)} mm / ${value.hour ? 'hour' : 'day'}` : 'Amount unavailable'}</span>
+            const { Icon: ConditionIcon, tone: conditionTone } = conditionIcon(value?.code);
+            return <button key={point.id} data-stop={i} type="button" className={`condition-step weather-tone-${conditionTone}${i === 0 || point.leg !== stops[i - 1].leg ? ' condition-day-start' : ''}`} aria-pressed={selected === i} onClick={() => selectStop(i)} title={`${point.name} · ${weatherDescription(value?.code)} · ${precipitationLabel(value)}`}>
+              <span className="condition-step-date">{dayLabel(point.day)} · {point.time || 'daily'}</span>
+              <span className="condition-step-icon"><ConditionIcon size={22} strokeWidth={1.7} aria-hidden="true" /></span>
+              <span className="condition-step-name">{point.name}</span>
+              <span className="condition-step-description">{value ? weatherDescription(value.code) : loading ? 'Loading…' : 'Unavailable'}</span>
+              <span className="condition-step-rain"><Droplets size={13} aria-hidden="true" /> {value?.rain != null ? `${Math.round(value.rain)}%${value.hour ? '' : ' max'}` : '—'}</span>
+              <span className="condition-step-amount">{value?.precipitation != null ? `${value.precipitation.toFixed(1)} mm / ${value.hour ? 'hour' : 'day'}` : 'Amount unavailable'}</span>
             </button>;
           })}
         </div>
+        <p className="weather-glance-note">Precipitation: chance and amount. Untimed stops show the day’s maximum hourly chance and total amount.</p>
         <div className="profile-weather-selected" aria-live="polite">
           <div className="profile-weather-controls">
-            <button type="button" aria-label="Previous weather stop" disabled={selected === 0} onClick={() => setSelected((i) => i - 1)}><ChevronLeft size={18} /></button>
+            <button type="button" aria-label="Previous weather stop" disabled={selected === 0} onClick={() => selectStop(selected - 1, true)}><ChevronLeft size={18} /></button>
             <span>{selected + 1} / {stops.length}</span>
-            <button type="button" aria-label="Next weather stop" disabled={selected === stops.length - 1} onClick={() => setSelected((i) => i + 1)}><ChevronRight size={18} /></button>
+            <button type="button" aria-label="Next weather stop" disabled={selected === stops.length - 1} onClick={() => selectStop(selected + 1, true)}><ChevronRight size={18} /></button>
           </div>
           <div className="profile-weather-place">
             <p className="profile-weather-meta">{dayLabel(stop.day)} · {stop.time || 'Untimed stop'} · {Math.round(stop.km)} km</p>
@@ -105,7 +114,7 @@ export function ProfileWeather({ children }: { children: ReactNode }) {
           </div>
           <div className={`profile-weather-reading weather-tone-${tone}`}>
             <Icon size={22} aria-hidden="true" />
-            <div><p>{loading && !reading ? 'Loading forecast…' : temperature}</p><p className="profile-weather-meta">{reading ? `${weatherDescription(reading.code)} · ${reading.hour ? `${reading.hour} CEST forecast` : 'Daily low–high'}` : 'No forecast available for this stop and date'}</p><p className="profile-weather-meta">💧 {precipitationLabel(reading)}</p></div>
+            <div><p>{loading && !reading ? 'Loading forecast…' : temperature}</p><p className="profile-weather-meta">{reading ? `${weatherDescription(reading.code)} · ${reading.hour ? `${reading.hour} CEST forecast` : 'Daily low–high'}` : 'No forecast available for this stop and date'}</p><p className="profile-weather-meta">{precipitationLabel(reading)}</p></div>
           </div>
         </div>
         <p className="profile-weather-help">Tap or hover over a marker, or step through every stop with the arrows. Hollow markers with a bar show daily ranges when an hourly forecast is unavailable or no time is scheduled; hollow markers below the plot have no forecast. Forecasts, not observed conditions. <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>{fetchedAt ? ` · Updated ${new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }).format(new Date(fetchedAt))} CEST` : ''}.</p>

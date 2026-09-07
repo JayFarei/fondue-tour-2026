@@ -18,16 +18,6 @@ export type Forecast = {
   };
 };
 export const weatherKey = ({ lat, lon }: WeatherLocation) => `${lat},${lon}`;
-export function weatherEmoji(code: number | null | undefined) {
-  if (code === 0 || code === 1) return '☀️';
-  if (code === 2) return '🌤️';
-  if (code === 3) return '☁️';
-  if (code === 45 || code === 48) return '🌫️';
-  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code ?? -1)) return '🌧️';
-  if ([71, 73, 75, 77, 85, 86].includes(code ?? -1)) return '🌨️';
-  if ([95, 96, 99].includes(code ?? -1)) return '⛈️';
-  return '❔';
-}
 export const routeDate = (day: string) =>
   `2026-09-${day.match(/\d{2}/)?.[0] ?? '08'}`;
 export const weatherDescription = (code: number | null | undefined) => {

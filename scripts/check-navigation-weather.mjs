@@ -6,7 +6,6 @@ import {
   forecastUrl,
   routeDate,
   weatherDescription,
-  weatherEmoji,
 } from '../lib/weather.ts';
 
 const plans = JSON.parse(
@@ -84,10 +83,6 @@ assert.equal(
 );
 assert.equal(weatherDescription(null), 'Conditions unavailable');
 assert.equal(weatherDescription(0), 'Clear');
-assert.equal(weatherEmoji(0), '☀️');
-assert.equal(weatherEmoji(3), '☁️');
-assert.equal(weatherEmoji(61), '🌧️');
-assert.equal(weatherEmoji(null), '❔');
 assert.equal(forecastAt(fixture, '2026-09-10', '15:14').precipitation, 0);
 assert.equal(forecastAt(fixture, '2026-09-10', '15:40').precipitation, 0.4);
 assert.equal(forecastAt(fixture, '2026-09-10', '').precipitation, 5.5);

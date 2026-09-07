@@ -600,19 +600,20 @@ body { --font-display: var(--font-barlow), 'Barlow Condensed', 'Arial Narrow', s
 .weather-day-picker button { min-height: 44px; padding: .5rem .65rem; font-size: .8rem; border-radius: 5px; cursor: pointer; }
 .weather-day-picker button[aria-pressed="true"] { background: var(--pine); color: #fffdf8; }
 .weather-glance-note { font-size: .75rem; line-height: 1.6; color: rgb(15 31 30 / 65%); margin: .5rem 0 1rem; }
-.weather-glance-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(135px, 1fr)); gap: .5rem; margin-bottom: 1.25rem; }
-.weather-glance-stop { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; padding: .75rem; text-align: left; border: 1px solid rgb(23 50 48 / 15%); border-radius: 6px; cursor: pointer; }
-.weather-glance-stop[aria-pressed="true"] { border-color: var(--pine); background: rgb(23 50 48 / 4%); }
-.weather-glance-name { font-size: .875rem; line-height: 1.4; min-height: 3.9em; overflow-wrap: anywhere; }
-.weather-glance-time { font-size: .75rem; line-height: 1.6; color: rgb(15 31 30 / 65%); }
-.weather-glance-symbol { display: flex; align-items: center; gap: .6rem; margin-top: .6rem; font-size: 1.4rem; }
-.weather-glance-symbol strong { font-size: 1rem; font-weight: 500; }
-.weather-glance-condition { font-size: .8rem; line-height: 1.5; min-height: 3em; }
-.weather-glance-rain { font-size: .875rem; margin-top: .4rem; }
+.conditions-track { position: relative; display: flex; overflow-x: auto; scrollbar-width: thin; scroll-snap-type: x proximity; padding-block: .5rem; }
+.condition-step { position: relative; flex: 0 0 122px; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 .5rem .5rem; cursor: pointer; scroll-snap-align: start; color: rgb(15 31 30 / 65%); }
+.condition-step::before { content: ''; position: absolute; top: 43px; left: 0; right: 0; height: 1px; background: rgb(23 50 48 / 16%); }
+.condition-step[aria-pressed="true"] { background: rgb(23 50 48 / 4%); border-radius: 4px; }
+.condition-step[aria-pressed="true"] .condition-step-icon { outline: 1px solid var(--pine); outline-offset: 2px; border-radius: 50%; }
+.condition-day-start { border-left: 1px dashed rgb(23 50 48 / 28%); }
+.condition-step-date, .condition-step-amount { font-size: .75rem; line-height: 1.5; white-space: nowrap; }
+.condition-step-icon { display: grid; place-items: center; position: relative; width: 36px; height: 36px; margin: .4rem 0 .7rem; background: var(--cream, #f4edda); }
+.condition-step-name { font-size: .75rem; line-height: 1.4; min-height: 4.2em; color: var(--pine); overflow-wrap: anywhere; }
+.condition-step-description { font-size: .75rem; line-height: 1.4; min-height: 2.8em; }
+.condition-step-rain { display: flex; align-items: center; gap: .2rem; font-size: .8rem; margin-top: .3rem; }
 @media (max-width: 640px) {
   .weather-day-picker { width: 100%; justify-content: space-between; gap: 0; }
   .weather-day-picker button { padding-inline: .4rem; }
-  .weather-glance-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .profile-weather-controls button { min-width: 44px; min-height: 44px; }
 }
 .profile-weather-selected { display: flex; gap: 1.25rem; align-items: center; border-block: 1px solid rgb(23 50 48 / 15%); padding-block: 1rem; }

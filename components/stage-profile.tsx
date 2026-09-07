@@ -1,4 +1,5 @@
 import elevation from '@/data/tour-elevation.json';
+import { ProfileWeather } from '@/components/profile-weather';
 
 type Summit = {
   name: string;
@@ -93,8 +94,7 @@ export function StageProfile() {
         </div>
       </div>
 
-      <div className="profile-scroll">
-        <div className="profile-frame">
+      <ProfileWeather>
           <svg
             className="profile-svg"
             viewBox={`0 0 ${VIEW_W} ${VIEW_H}`}
@@ -172,8 +172,7 @@ export function StageProfile() {
               </g>
             ))}
           </svg>
-        </div>
-      </div>
+      </ProfileWeather>
 
       <p className="profile-caption">
         Elevation from Open-Meteo along the generated route · Friday shown with the long San Bernardino option · scroll sideways on a phone

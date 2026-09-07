@@ -588,6 +588,37 @@ body { --font-display: var(--font-barlow), 'Barlow Condensed', 'Arial Narrow', s
 
 .profile-svg { display: block; width: 100%; height: auto; }
 
+.weather-profile-heading { fill: var(--pine); font-size: 11px; font-weight: 700; letter-spacing: .12em; }
+.weather-profile-key { fill: rgb(15 31 30 / 55%); font-size: 10px; }
+.weather-profile-stop { cursor: pointer; outline: none; }
+.weather-profile-stop:focus-visible > circle:last-child { stroke-width: 4; }
+.weather-profile-selection { stroke: var(--pine); stroke-width: 1; stroke-dasharray: 2 4; opacity: .4; pointer-events: none; }
+.profile-weather-panel { margin-top: .75rem; }
+.profile-weather-selected { display: flex; gap: 1.25rem; align-items: center; border-block: 1px solid rgb(23 50 48 / 15%); padding-block: 1rem; }
+.profile-weather-controls { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
+.profile-weather-controls button { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid rgb(23 50 48 / 20%); border-radius: 50%; cursor: pointer; }
+.profile-weather-controls button:disabled { opacity: .3; cursor: default; }
+.profile-weather-controls span { font-size: .7rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.profile-weather-place { flex: 1; min-width: 0; font-size: .9rem; }
+.profile-weather-meta { font-size: .7rem; color: rgb(15 31 30 / 55%); line-height: 1.6; }
+.profile-weather-reading { display: flex; align-items: center; gap: .75rem; font-size: .9rem; max-width: 320px; }
+.profile-weather-reading > svg { flex-shrink: 0; }
+.profile-weather-help { margin-top: .75rem; font-size: .72rem; line-height: 1.7; color: rgb(15 31 30 / 55%); }
+.profile-weather-help a { text-decoration: underline; }
+.profile-weather-all { margin-top: 1rem; font-size: .8rem; }
+.profile-weather-all summary { cursor: pointer; color: var(--pine); }
+.profile-weather-all h3 { margin-block: 1.5rem .75rem; font-weight: 600; }
+.profile-weather-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+.profile-weather-list > div { min-width: 0; padding: .75rem; border: 1px solid rgb(23 50 48 / 12%); border-radius: 6px; }
+.profile-weather-stop-name { text-align: left; cursor: pointer; }
+.profile-weather-stop-name:hover { text-decoration: underline; }
+@media (max-width: 640px) {
+  .profile-weather-selected { flex-wrap: wrap; gap: .75rem; }
+  .profile-weather-place { flex-basis: calc(100% - 130px); }
+  .profile-weather-reading { width: 100%; max-width: none; }
+  .profile-weather-list { grid-template-columns: minmax(0, 1fr); }
+}
+
 .profile-grid { stroke: rgb(23 50 48 / 16%); stroke-width: 1; stroke-dasharray: 3 4; }
 
 .profile-grid-label {

@@ -41,7 +41,9 @@ for (const plan of [
 }
 const cacheKey = 'fondue-weather-v1';
 
-function conditionIcon(code: number | null | undefined) {
+export const useWeather = () => useContext(WeatherContext);
+
+export function conditionIcon(code: number | null | undefined) {
   if (code === 0 || code === 1) return { Icon: Sun, tone: 'sun' };
   if (code === 2) return { Icon: CloudSun, tone: 'sun' };
   if (code === 3) return { Icon: Cloud, tone: 'cloud' };

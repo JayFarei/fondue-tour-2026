@@ -2,12 +2,13 @@
 
 /* eslint-disable jsx-a11y/prefer-tag-over-role */
 // SVG stop groups use explicit button roles for keyboard access.
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { ArrowRight, X } from 'lucide-react';
 import elevation from '@/data/tour-elevation.json';
 import stops from '@/data/profile-stops.json';
 import { conditionIcon, useWeather } from '@/components/stop-weather';
 import { forecastAt, routeDate, weatherDescription, weatherKey } from '@/lib/weather';
+import { temperatureColor } from '@/lib/temperature-color';
 
 const WIDTH = 3280;
 const HEIGHT = 774;
@@ -30,7 +31,6 @@ const degrees = (v: number) => `${Math.round(v)}°`;
 
 export function ProfileWeather() {
   const { data, loading, fetchedAt } = useWeather();
-  const scroller = useRef<HTMLDivElement>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const readings = stops.map((stop) => {
     const date = routeDate(stop.day);
@@ -39,7 +39,7 @@ export function ProfileWeather() {
   });
   const values = readings.flatMap((r) => r ? [r.temperature, r.low, r.high].filter((n): n is number => n != null && Number.isFinite(n)) : []);
   const min = Math.floor(Math.min(0, ...values) / 5) * 5;
-  const max = Math.max(20, Math.ceil(Math.max(20, ...values) / 5) * 5);
+  const max = Math.max(25, Math.ceil(Math.max(25, ...values) / 5) * 5);
   const tempY = (v: number) => 445 - (v - min) / (max - min) * 100;
   const ticks = Array.from({ length: (max - min) / 5 + 1 }, (_, i) => min + i * 5);
   const temperature = (r: ReturnType<typeof forecastAt>) => r?.temperature != null ? degrees(r.temperature) : r?.low != null && r.high != null ? `${degrees(r.low)}–${degrees(r.high)}` : '—';
@@ -51,25 +51,27 @@ export function ProfileWeather() {
     <div className="journey-chart">
       <div className="journey-toolbar">
         <p className="journey-scroll-hint"><ArrowRight size={18} aria-hidden="true" /> Swipe / scroll right through the road trip</p>
-        <div className="journey-days" aria-label="Jump along the chart">
-          {elevation.legs.map((leg) => <button key={leg.id} type="button" onClick={() => scroller.current?.scrollTo({ left: Math.max(0, x(leg.startKm) - 24), behavior: 'smooth' })}>{leg.label.split(' · ')[0]}</button>)}
-        </div>
       </div>
       <div className="journey-window">
-        <div className="journey-scroll" ref={scroller} role="group" aria-label="Scrollable elevation, temperature, conditions and precipitation chart">
+        <div className="journey-scroll" role="group" aria-label="Scrollable elevation, temperature, conditions and precipitation chart">
           <svg className="journey-axis" width="68" height={HEIGHT} viewBox={`0 0 68 ${HEIGHT}`} aria-label="Pinned elevation and temperature scales">
             <text x="8" y="24" className="journey-axis-title">ROUTE</text>
             <text x="8" y="134" className="journey-axis-title">METRES</text>
             {[0, 1000, 2000].map((m) => <text key={m} x="58" y={mountainY(m) + 4} textAnchor="end">{m.toLocaleString('en-GB')}</text>)}
             <text x="8" y="332" className="journey-axis-title">TEMP °C</text>
-            {ticks.map((v) => <text key={v} x="58" y={tempY(v) + 4} textAnchor="end">{degrees(v)}</text>)}
+            {ticks.map((v) => <text key={v} x="58" y={tempY(v) + 4} textAnchor="end" style={{ fill: temperatureColor(v) }}>{degrees(v)}</text>)}
             <text x="8" y="485" className="journey-axis-title">SKY</text>
             <text x="8" y="503" className="journey-axis-title">RAIN %</text>
             <text x="8" y="521" className="journey-axis-title">mm</text>
             <text x="8" y={HEIGHT - 12} className="journey-axis-title">KM</text>
           </svg>
           <svg className="journey-plot" width={WIDTH} height={HEIGHT} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="group" aria-label="All 48 stops aligned to the same route distance across mountains, temperature and weather">
-            <defs><linearGradient id="journey-gold" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#f0c14e" /><stop offset="1" stopColor="#e2a92f" /></linearGradient></defs>
+            <defs>
+              <linearGradient id="journey-gold" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#f0c14e" /><stop offset="1" stopColor="#e2a92f" /></linearGradient>
+              <linearGradient id="journey-temperature" gradientUnits="userSpaceOnUse" x1="0" x2="0" y1={tempY(max)} y2={tempY(min)}>
+                {[max, 22.01, 22, 18, 17.99, min].map((v) => <stop key={v} offset={(max - v) / (max - min)} stopColor={temperatureColor(v)} />)}
+              </linearGradient>
+            </defs>
             {elevation.legs.map((leg) => <g key={leg.id}>
               <rect x={x(leg.startKm)} y="0" width={x(leg.endKm) - x(leg.startKm)} height="30" fill={leg.color} opacity=".16" />
               <text x={x(leg.startKm) + 8} y="20" className="journey-day-label" fill={leg.color}>{leg.label.split(' · ')[0]}</text>
@@ -84,18 +86,21 @@ export function ProfileWeather() {
               <text x={x(summit.km)} y="122" transform={`rotate(-45 ${x(summit.km)} 122)`} className="journey-summit"><tspan>{summit.name}</tspan><tspan x={x(summit.km)} dy="14">{summit.altitude.toLocaleString('en-GB')} m</tspan></text>
               <circle cx={x(summit.km)} cy={mountainY(summit.sampled)} r="2.5" fill="#8a6410" />
             </g>)}
+            <rect x={LEFT} y={tempY(max)} width={RIGHT - LEFT} height={tempY(min) - tempY(max)} fill="url(#journey-temperature)" opacity=".1" />
+            <text x={LEFT} y="330" fontSize="11" fill="#52645e">Blue below 18°C · neutral 18–22°C · red above 22°C</text>
             {ticks.map((v) => <line key={v} x1={LEFT} x2={RIGHT} y1={tempY(v)} y2={tempY(v)} className="profile-grid" />)}
+            {[18, 22].map((v) => <line key={v} x1={LEFT} x2={RIGHT} y1={tempY(v)} y2={tempY(v)} stroke={temperatureColor(v === 18 ? 17.99 : 22.01)} strokeDasharray="4 5" opacity=".35" />)}
             <line x1={LEFT} x2={RIGHT} y1="464" y2="464" className="journey-day-edge" />
             {stops.map((stop, i) => {
               const r = readings[i], cx = x(stop.km), rowY = 485 + lanes[i] * 62;
               const { Icon, tone } = conditionIcon(r?.code);
               const cy = r?.temperature != null ? tempY(r.temperature) : r?.high != null ? tempY(r.high) : 454;
-              const color = elevation.legs.find((leg) => leg.id === stop.leg)!.color;
+              const color = temperatureColor(r?.temperature ?? r?.high);
               return <g key={stop.id} data-km={stop.km} data-weather-stop={i} role="button" tabIndex={0} aria-label={describe(i)} className={`journey-stop weather-tone-${tone}`} onClick={() => setSelected(i)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelected(i); } }}>
                 <title>{describe(i)}</title>
                 <line x1={cx} x2={cx} y1={cy + 5} y2={rowY - 12} className="journey-stop-guide" />
-                {r?.temperature == null && r?.low != null && r.high != null ? <line x1={cx} x2={cx} y1={tempY(r.low)} y2={tempY(r.high)} stroke={color} strokeWidth="2" /> : null}
-                <circle cx={cx} cy={cy} r="4" fill={r?.temperature != null ? color : '#f4ecda'} stroke={color} strokeWidth="1.5" />
+                {r?.temperature == null && r?.low != null && r.high != null ? <line x1={cx} x2={cx} y1={tempY(r.low)} y2={tempY(r.high)} stroke="url(#journey-temperature)" strokeWidth="3" /> : null}
+                <circle cx={cx} cy={cy} r="4.5" fill={r?.temperature != null ? color : '#f4ecda'} stroke={color} strokeWidth="1.8" />
                 <rect x={cx - 24} y={rowY - 12} width="48" height="58" rx="4" className={selected === i ? 'journey-stop-hit selected' : 'journey-stop-hit'} />
                 <Icon x={cx - 10} y={rowY - 10} width="20" height="20" strokeWidth={1.7} aria-hidden="true" />
                 <text x={cx} y={rowY + 25} textAnchor="middle" className="journey-rain">{r?.rain != null ? Math.round(r.rain) + '%' : '—'}</text>

@@ -576,9 +576,6 @@ body { --font-display: var(--font-barlow), 'Barlow Condensed', 'Arial Narrow', s
 .journey-chart { margin: 2rem auto 0; max-width: 1440px; padding-inline: 1.25rem; }
 .journey-toolbar { position: sticky; top: 60px; z-index: 4; background: var(--cream); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding-block: .5rem; margin-bottom: .75rem; }
 .journey-scroll-hint { display: flex; gap: .5rem; align-items: center; font-size: .875rem; color: var(--pine); font-weight: 500; }
-.journey-days { display: flex; gap: .4rem; }
-.journey-days button { padding: .5rem .6rem; min-height: 44px; font-size: .8rem; cursor: pointer; border: 1px solid rgb(23 50 48 / 16%); border-radius: 4px; }
-.journey-days button:hover { background: rgb(23 50 48 / 7%); }
 .journey-window { position: relative; border: 1px solid rgb(23 50 48 / 18%); border-radius: 6px; overflow: hidden; }
 .journey-scroll { display: flex; overflow-x: auto; scrollbar-width: thin; overscroll-behavior-x: contain; }
 .journey-axis { position: sticky; left: 0; z-index: 2; flex: 0 0 68px; background: var(--cream); box-shadow: 4px 0 10px rgb(23 50 48 / 7%); }
@@ -602,8 +599,6 @@ body { --font-display: var(--font-barlow), 'Barlow Condensed', 'Arial Narrow', s
 @media (max-width: 640px) {
   .journey-chart { padding-inline: .5rem; }
   .journey-scroll-hint { font-size: .8rem; }
-  .journey-days { width: 100%; justify-content: space-between; gap: .2rem; }
-  .journey-days button { padding-inline: .4rem; }
 }
 
 .profile-grid { stroke: rgb(23 50 48 / 16%); stroke-width: 1; stroke-dasharray: 3 4; }

@@ -12,7 +12,7 @@ import { temperatureColor } from '@/lib/temperature-color';
 
 const WIDTH = 3280;
 const HEIGHT = 774;
-const LEFT = 44;
+const LEFT = 0;
 const RIGHT = WIDTH - 44;
 const x = (km: number) => LEFT + km / elevation.totalKm * (RIGHT - LEFT);
 const mountainY = (m: number) => 308 - m / 2800 * 164;
@@ -92,7 +92,7 @@ export function ProfileWeather() {
           {next ? <button type="button" className="journey-next-preview" aria-label={`Next day: ${next.label}`} title={`Scroll to ${next.label}`} onClick={() => jump(next.left)}><span>{next.label}</span><ArrowRight size={14} /></button> : <span className="journey-route-end">Lugano</span>}
         </div>
         <div className="journey-scroll" ref={scroller} onScroll={(event) => setScrollLeft(event.currentTarget.scrollLeft)} role="group" aria-label="Scrollable elevation, temperature, conditions and precipitation chart">
-          <svg className="journey-axis" width="68" height={HEIGHT} viewBox={`0 0 68 ${HEIGHT}`} aria-label="Pinned elevation and temperature scales">
+          <svg className="journey-axis" style={{ boxShadow: scrollLeft < 1 ? 'none' : undefined }} width="68" height={HEIGHT} viewBox={`0 0 68 ${HEIGHT}`} aria-label="Pinned elevation and temperature scales">
             <text x="8" y="24" className="journey-axis-title">ROUTE</text>
             <text x="8" y="134" className="journey-axis-title">METRES</text>
             {[0, 1000, 2000].map((m) => <text key={m} x="58" y={mountainY(m) + 4} textAnchor="end">{m.toLocaleString('en-GB')}</text>)}
@@ -117,7 +117,7 @@ export function ProfileWeather() {
             </g>)}
             {[0, 1000, 2000].map((m) => <line key={m} x1={LEFT} x2={RIGHT} y1={mountainY(m)} y2={mountainY(m)} className="profile-grid" />)}
             <path d={area} fill="url(#journey-gold)" /><polyline points={ridge} className="profile-ridge" />
-            <text x={LEFT} y="62" className="journey-terminus">ZÜRICH</text>
+            <text x={LEFT + 8} y="62" className="journey-terminus">ZÜRICH</text>
             <text x={RIGHT} y="62" textAnchor="end" className="journey-terminus">LUGANO</text>
             {elevation.summits.map((summit, i) => <g key={i}>
               <line x1={x(summit.km)} x2={x(summit.km)} y1="139" y2={mountainY(summit.sampled)} className="profile-leader" />
@@ -125,12 +125,14 @@ export function ProfileWeather() {
               <circle cx={x(summit.km)} cy={mountainY(summit.sampled)} r="2.5" fill="#8a6410" />
             </g>)}
             <rect x={LEFT} y={tempY(max)} width={RIGHT - LEFT} height={tempY(min) - tempY(max)} fill="url(#journey-temperature)" opacity=".1" />
-            <text x={LEFT} y="330" fontSize="11" fill="#52645e">Blue below 18°C · neutral 18–22°C · red above 22°C</text>
+            <text x={LEFT + 8} y="330" fontSize="11" fill="#52645e">Blue below 18°C · neutral 18–22°C · red above 22°C</text>
             {ticks.map((v) => <line key={v} x1={LEFT} x2={RIGHT} y1={tempY(v)} y2={tempY(v)} className="profile-grid" />)}
             {[18, 22].map((v) => <line key={v} x1={LEFT} x2={RIGHT} y1={tempY(v)} y2={tempY(v)} stroke={temperatureColor(v === 18 ? 17.99 : 22.01)} strokeDasharray="4 5" opacity=".35" />)}
             <line x1={LEFT} x2={RIGHT} y1="464" y2="464" className="journey-day-edge" />
             {stops.map((stop, i) => {
               const r = readings[i], cx = x(stop.km), rowY = 485 + lanes[i] * 62;
+              // Inset only the edge annotation; the route and temperature still begin at 0 km.
+              const labelX = Math.max(24, cx);
               const { Icon, tone } = conditionIcon(r?.code);
               const cy = r?.temperature != null ? tempY(r.temperature) : r?.high != null ? tempY(r.high) : 454;
               const color = temperatureColor(r?.temperature ?? r?.high);
@@ -139,14 +141,14 @@ export function ProfileWeather() {
                 <line x1={cx} x2={cx} y1={cy + 5} y2={rowY - 12} className="journey-stop-guide" />
                 {r?.temperature == null && r?.low != null && r.high != null ? <line x1={cx} x2={cx} y1={tempY(r.low)} y2={tempY(r.high)} stroke="url(#journey-temperature)" strokeWidth="3" /> : null}
                 <circle cx={cx} cy={cy} r="4.5" fill={r?.temperature != null ? color : '#f4ecda'} stroke={color} strokeWidth="1.8" />
-                <rect x={cx - 24} y={rowY - 12} width="48" height="58" rx="4" className={selected === i ? 'journey-stop-hit selected' : 'journey-stop-hit'} />
-                <Icon x={cx - 10} y={rowY - 10} width="20" height="20" strokeWidth={1.7} aria-hidden="true" />
-                <text x={cx} y={rowY + 25} textAnchor="middle" className="journey-rain">{r?.rain != null ? Math.round(r.rain) + '%' : '—'}</text>
-                <text x={cx} y={rowY + 41} textAnchor="middle" className="journey-amount">{r?.precipitation != null ? r.precipitation.toFixed(1) : '—'}{r && !r.hour ? '*' : ''}</text>
+                <rect x={labelX - 24} y={rowY - 12} width="48" height="58" rx="4" className={selected === i ? 'journey-stop-hit selected' : 'journey-stop-hit'} />
+                <Icon x={labelX - 10} y={rowY - 10} width="20" height="20" strokeWidth={1.7} aria-hidden="true" />
+                <text x={labelX} y={rowY + 25} textAnchor="middle" className="journey-rain">{r?.rain != null ? Math.round(r.rain) + '%' : '—'}</text>
+                <text x={labelX} y={rowY + 41} textAnchor="middle" className="journey-amount">{r?.precipitation != null ? r.precipitation.toFixed(1) : '—'}{r && !r.hour ? '*' : ''}</text>
               </g>;
             })}
             <line x1={LEFT} x2={RIGHT} y1={HEIGHT - 30} y2={HEIGHT - 30} className="journey-day-edge" />
-            {Array.from({ length: 15 }, (_, i) => i * 100).map((km) => <text key={km} x={x(km)} y={HEIGHT - 12} textAnchor="middle" className="journey-distance">{km}</text>)}
+            {Array.from({ length: 15 }, (_, i) => i * 100).map((km) => <text key={km} x={x(km) + (km === 0 ? 8 : 0)} y={HEIGHT - 12} textAnchor={km === 0 ? 'start' : 'middle'} className="journey-distance">{km}</text>)}
           </svg>
         </div>
         {selected != null ? <div className="journey-tooltip" role="status"><span>{describe(selected)}</span><button type="button" aria-label="Close stop details" onClick={() => setSelected(null)}><X size={18} /></button></div> : null}

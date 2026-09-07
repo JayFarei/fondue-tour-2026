@@ -75,10 +75,10 @@ function simplifyGeometry(points, tolerance = 0.00008) {
 
 async function routeGeometry(plan) {
   const coordinates = plan.stops.map((stop) => `${stop.lon},${stop.lat}`).join(';');
-  const url = `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=false`;
+  const url = `https://router.project-osrm.org/route/v1/driving/${coordinates}?overview=full&geometries=geojson&steps=true`;
 
   for (let attempt = 1; attempt <= 3; attempt += 1) {
-    const response = await fetch(url, { headers: { 'User-Agent': 'FondueTourPlanner/1.0' } });
+    const response = await fetch(url, { headers: { 'User-Agent': 'FondueTourPlanner/1.0' }, signal: AbortSignal.timeout(45000) });
     if (response.ok) {
       const body = await response.json();
       if (body.code === 'Ok' && body.routes?.[0]?.geometry?.coordinates?.length) {
@@ -91,24 +91,17 @@ async function routeGeometry(plan) {
   throw new Error(`OSRM could not build ${plan.id}`);
 }
 
-function nearestGeometryIndexes(stops, geometry) {
-  let searchFrom = 0;
-  return stops.map((stop, stopIndex) => {
-    let nearestIndex = searchFrom;
-    let nearestDistance = Number.POSITIVE_INFINITY;
-
-    for (let index = searchFrom; index < geometry.length; index += 1) {
-      const [lon, lat] = geometry[index];
-      const distance = (lat - stop.lat) ** 2 + (lon - stop.lon) ** 2;
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestIndex = index;
-      }
-    }
-
-    searchFrom = Math.min(nearestIndex + (stopIndex ? 1 : 0), geometry.length - 1);
-    return nearestIndex;
-  });
+function geometryWithStopIndexes(route) {
+  const geometry = [];
+  const indexes = [0];
+  for (const leg of route.legs) {
+    const points = leg.steps.flatMap((step) => step.geometry.coordinates);
+    const simplified = simplifyGeometry(points.filter((point, i) => !i || point[0] !== points[i - 1][0] || point[1] !== points[i - 1][1]));
+    if (!simplified.length) throw new Error('Missing OSRM leg geometry');
+    geometry.push(...(geometry.length ? simplified.slice(1) : simplified));
+    indexes.push(geometry.length - 1);
+  }
+  return { geometry, indexes };
 }
 
 function gpxDocument(plan, stops, geometry, suffix = '') {
@@ -140,9 +133,8 @@ ${trackPoints}
 for (const plan of plans) {
   process.stdout.write(`Building ${plan.id}... `);
   const route = await routeGeometry(plan);
-  const geometry = simplifyGeometry(route.geometry.coordinates);
+  const { geometry, indexes } = geometryWithStopIndexes(route);
   builtRoutes.set(plan.id, { plan, route, geometry });
-  const indexes = nearestGeometryIndexes(plan.stops, geometry);
   const featureCollection = {
     type: 'FeatureCollection',
     properties: {
@@ -150,6 +142,7 @@ for (const plan of plans) {
       distanceMetres: route.distance,
       durationSeconds: route.duration,
       generatedBy: 'OSRM using OpenStreetMap data',
+      stopGeometryIndexes: indexes,
     },
     features: [
       {

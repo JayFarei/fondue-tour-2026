@@ -947,6 +947,9 @@ body { --font-display: var(--font-barlow), 'Barlow Condensed', 'Arial Narrow', s
 
 .route-restart-row:hover { border-color: var(--border); background: #fffdf8; }
 
+.stop-weather { margin-top: .6rem; overflow-wrap: anywhere; }
+.stop-weather strong { color: var(--pine); font-variant-numeric: tabular-nums; }
+
 .route-restart-main {
   display: flex;
   min-width: 0;

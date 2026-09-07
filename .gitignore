@@ -38,3 +38,6 @@ next-env.d.ts
 /work/
 data/.elevation-cache.json
 dist-static/
+/.playwright-cli/
+/output/playwright/
+*.tsbuildinfo

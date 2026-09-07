@@ -24,6 +24,10 @@ import {
 import { assetPath } from '@/lib/asset-path';
 import { StageProfile, highestSummit, summitCount } from '@/components/stage-profile';
 import { FullTourOverview, TourMap } from '@/components/tour-map';
+import routePlans from '@/data/tour-routes.json';
+import { directionsUrl, routeParts } from '@/lib/navigation';
+import { StopWeather } from '@/components/stop-weather';
+import { extraWeatherLocations, type WeatherLocation } from '@/lib/weather';
 
 // The page has no request-time data, so it can be emitted as pure HTML. This lets
 // the same source produce a static export for GitHub Pages.
@@ -36,98 +40,18 @@ const mapsRoute = (origin: string, destination: string, waypoints: string[] = []
 };
 
 const mapLinks = {
-  personalMeet: mapsRoute(
-    'ibis budget Zurich Airport, Flughofstrasse 45, 8152 Glattbrugg, Switzerland',
-    'Restaurant Le Chalet Savoyard, 7400 Route du Col des Aravis, 74220 La Clusaz, France',
-  ),
-  genevaMeet: mapsRoute(
-    'Genève Aéroport, 1218 Le Grand-Saconnex, Switzerland',
-    'Restaurant Le Chalet Savoyard, 7400 Route du Col des Aravis, 74220 La Clusaz, France',
-  ),
-  tuesdayWarmupA: mapsRoute(
-    'Menton, France',
-    'Col d’Izoard, France',
-    ['Col de la Bonette, France', 'Restaurant L’Igloo Varsin, Col de Vars, France'],
-  ),
-  tuesdayWarmupB: mapsRoute(
-    'Col d’Izoard, France',
-    'Saint Charles Hôtel & Spa Val Cenis, France',
-    ['Avia, 9 Route de Gap, Briançon, France', 'Exilles, Italy'],
-  ),
-  wednesdayMorning: mapsRoute(
-    'Saint Charles Hôtel & Spa Val Cenis, France',
-    'Restaurant Le Chalet Savoyard, Col des Aravis, La Clusaz, France',
-    ['Col de l’Iseran, France', 'Intermarché station-service Bourg-Saint-Maurice', 'Cormet de Roselend'],
-  ),
-  wednesdayAfternoon: mapsRoute(
-    'Restaurant Le Chalet Savoyard, Col des Aravis, La Clusaz, France',
-    'Chalet Eden, Frazione Villaret 74, La Thuile, Italy',
-    ['Les Saisies, France', 'Le Chalet de Roselend, Beaufort, France', 'Hospice du Petit-Saint-Bernard'],
-  ),
-  thursdayMorning: mapsRoute(
-    'Chalet Eden, Frazione Villaret 74, La Thuile, Italy',
-    'Lac de Géronde, Sierre, Switzerland',
-    ['Eni Station, Viale Piccolo San Bernardo, Aosta, Italy', 'Great St Bernard Hospice'],
-  ),
-  thursdayAfternoon: mapsRoute(
-    'Lac de Géronde, Sierre, Switzerland',
-    'Hotel Restaurant Landhaus, Münster-Geschinen, Switzerland',
-    ['Hängebrücke Fürgangen Mühlebach, Switzerland'],
-  ),
-  thursdayLoop: mapsRoute(
-    'Hotel Restaurant Landhaus, Münster-Geschinen, Switzerland',
-    'Hotel Restaurant Landhaus, Münster-Geschinen, Switzerland',
-    ['Belvedere Furka, Obergoms', 'Parcheggio Tremola, Airolo', 'Nufenenpass, Switzerland'],
-  ),
-  fridayMorning: mapsRoute(
-    'Hotel Restaurant Landhaus, Münster-Geschinen, Switzerland',
-    'Ustria Alpsu, Oberalppass, Switzerland',
-    ['Gelmerbahn, Guttannen', 'Susten Pass, Switzerland'],
-  ),
-  fridaySanBernardinoA: mapsRoute(
-    'Ustria Alpsu, Oberalppass, Switzerland',
-    'San Bernardino Pass, Switzerland',
-    ['Garviel da Medel, Switzerland', 'Motto, Acquarossa, Switzerland', 'Mesocco, Switzerland'],
-  ),
-  fridaySanBernardinoB: mapsRoute(
-    'San Bernardino Pass, Switzerland',
-    'Hotel Waldhaus am See, Valbella, Switzerland',
-    ['Albula Pass, Switzerland', 'Migrol Tankstelle, Lantsch/Lenz, Switzerland'],
-  ),
-  fridayAlbula: mapsRoute(
-    'Ustria Alpsu, Oberalppass, Switzerland',
-    'Hotel Waldhaus am See, Valbella, Switzerland',
-    ['Rothenbrunnen, Switzerland', 'Albula Pass, Switzerland', 'Migrol Tankstelle, Lantsch/Lenz, Switzerland'],
-  ),
-  saturdayMorning: mapsRoute(
-    'Hotel Waldhaus am See, Valbella, Switzerland',
-    'Bellavista, Maloja, Switzerland',
-    ['Wasescha Sport Rent, Savognin, Switzerland', 'Restaurant PappaLoù, Silvaplana, Switzerland'],
-  ),
-  saturdayAfternoon: mapsRoute(
-    'Bellavista, Maloja, Switzerland',
-    'Hotel Ascona, Via Signor in Croce 1, Ascona, Switzerland',
-    ['Shell, Strada Cantonale 79, Stampa, Switzerland', 'Berghaus Splügenpass', 'Ospizio San Bernardino'],
-  ),
-  sundayReturn: mapsRoute(
-    'Hotel Ascona, Via Signor in Croce 1, Ascona, Switzerland',
-    'AMAG Automobili e Motori SA, Via Monte Boglia 24, Lugano, Switzerland',
-  ),
-  luganoBellinzona: mapsRoute(
-    'AMAG Automobili e Motori SA, Via Monte Boglia 24, Lugano, Switzerland',
-    'Bellinzona railway station, Switzerland',
-    [],
-    'transit',
-  ),
-  bellinzonaMalpensa: mapsRoute(
-    'Bellinzona railway station, Switzerland',
-    'Milan Malpensa Airport Terminal 2, Italy',
-    [],
-    'transit',
-  ),
+  personalMeet: directionsUrl(routePlans[1].stops.slice(0, 2)),
+  genevaMeet: directionsUrl(routePlans[2].stops.slice(0, 2)),
+  luganoBellinzona: mapsRoute("AMAG Automobili e Motori SA, Via Monte Boglia 24, Lugano, Switzerland", "Bellinzona railway station, Switzerland", [], "transit"),
+  bellinzonaMalpensa: mapsRoute("Bellinzona railway station, Switzerland", "Milan Malpensa Airport Terminal 2, Italy", [], "transit"),
 };
 
 type RouteButton = { label: string; href: string; note?: string };
+const routeButtons = (id: string, from: number, to: number, label: string): RouteButton[] => {
+  const plan = routePlans.find(p => p.id === id)!;
+  const parts = routeParts(plan.stops.slice(from, to + 1));
+  return parts.map((part, i) => ({ label: `${label}${parts.length > 1 ? ` · ${i + 1}/${parts.length}` : ''}`, href: part.href, note: `${part.stops[0].name} → ${part.stops.at(-1)!.name}` }));
+};
 type Stop = { time: string; place: string; note: string; icon?: LucideIcon };
 type Day = {
   id: string;
@@ -158,8 +82,8 @@ const days: Day[] = [
     accent: '#d39b31',
     badge: 'Warm-up crew',
     routes: [
-      { label: 'Route A · Bonette to Izoard', href: mapLinks.tuesdayWarmupA },
-      { label: 'Route B · Izoard to hotel', href: mapLinks.tuesdayWarmupB },
+      ...routeButtons('tuesday-warmup', 0, 3, 'Bonette to Izoard'),
+      ...routeButtons('tuesday-warmup', 3, 8, 'Izoard to hotel'),
     ],
     stops: [
       { time: '09:30', place: 'Menton', note: 'Roadbook departure' },
@@ -183,8 +107,8 @@ const days: Day[] = [
     routes: [
       { label: 'Your Zürich → meetup route', href: mapLinks.personalMeet, note: 'Leave 06:30–06:45' },
       { label: 'Geneva → meetup route', href: mapLinks.genevaMeet, note: 'Marco & Si · lands 11:05' },
-      { label: 'Group morning route', href: mapLinks.wednesdayMorning },
-      { label: 'Group afternoon route', href: mapLinks.wednesdayAfternoon },
+      ...routeButtons('wednesday-group', 0, 6, 'Group morning'),
+      ...routeButtons('wednesday-group', 6, 12, 'Group afternoon'),
     ],
     stops: [
       { time: '13:14', place: 'Col des Aravis', note: 'Lunch & rendezvous', icon: Utensils },
@@ -205,9 +129,9 @@ const days: Day[] = [
     subtitle: 'Aosta, Great St Bernard, flexible lakeside lunch, Furka, Tremola and Nufenen.',
     accent: '#396b67',
     routes: [
-      { label: 'Morning · La Thuile to Sierre', href: mapLinks.thursdayMorning },
-      { label: 'Lunch to Landhaus', href: mapLinks.thursdayAfternoon },
-      { label: 'Furka · Tremola · Nufenen loop', href: mapLinks.thursdayLoop },
+      ...routeButtons('thursday-loop', 0, 4, 'Morning to Sierre'),
+      ...routeButtons('thursday-loop', 4, 7, 'Lunch to Landhaus'),
+      ...routeButtons('thursday-loop', 7, 13, 'Furka · Tremola · Nufenen'),
     ],
     stops: [
       { time: '09:00', place: 'La Thuile', note: 'Depart hotel' },
@@ -231,10 +155,9 @@ const days: Day[] = [
     accent: '#5b637d',
     badge: 'Printed voucher',
     routes: [
-      { label: 'Morning · Gelmerbahn & Susten', href: mapLinks.fridayMorning },
-      { label: 'Option 1A · to San Bernardino', href: mapLinks.fridaySanBernardinoA },
-      { label: 'Option 1B · to Valbella', href: mapLinks.fridaySanBernardinoB },
-      { label: 'Option 2 · direct via Albula', href: mapLinks.fridayAlbula },
+      ...routeButtons('friday-san-bernardino', 0, 6, 'Morning · Gelmerbahn & Susten'),
+      ...routeButtons('friday-san-bernardino', 6, 14, 'Option 1 · San Bernardino'),
+      ...routeButtons('friday-albula', 6, 12, 'Option 2 · Albula Pass'),
     ],
     stops: [
       { time: '08:20', place: 'Landhaus', note: 'Early departure' },
@@ -257,8 +180,8 @@ const days: Day[] = [
     subtitle: 'Savognin, Engadin lakes, Maloja, Splügen and San Bernardino before the Ticino finish.',
     accent: '#836036',
     routes: [
-      { label: 'Morning · Valbella to Maloja', href: mapLinks.saturdayMorning },
-      { label: 'Afternoon · Maloja to Ascona', href: mapLinks.saturdayAfternoon },
+      ...routeButtons('saturday-ascona', 0, 3, 'Morning to Maloja'),
+      ...routeButtons('saturday-ascona', 3, 8, 'Afternoon to Ascona'),
     ],
     stops: [
       { time: '09:00', place: 'Valbella', note: 'Depart hotel' },
@@ -282,7 +205,7 @@ const days: Day[] = [
     accent: '#263d45',
     badge: 'Car due 10:00',
     routes: [
-      { label: 'Drive to AMAG Lugano', href: mapLinks.sundayReturn, note: 'Leave about 08:15–08:30' },
+      ...routeButtons('sunday-return', 0, 1, 'Drive to AMAG Lugano'),
       { label: 'Public transport to Bellinzona', href: mapLinks.luganoBellinzona },
     ],
     stops: [
@@ -294,6 +217,16 @@ const days: Day[] = [
     callout: { title: 'Document the return', copy: 'Photograph every panel, fuel gauge, mileage, parking bay and key-drop. Keep the final receipt and return evidence.', icon: ShieldCheck },
   },
 ];
+
+const weatherStopsFor = (id: string, indexes: number[]) => indexes.map(i => routePlans.find(p => p.id === id)!.stops[i]);
+const dayWeatherStops: Record<string, WeatherLocation[]> = {
+  tuesday: weatherStopsFor('tuesday-warmup', [0, 1, 3, 8]),
+  wednesday: weatherStopsFor('wednesday-personal', [1, 2, 3, 7]),
+  thursday: weatherStopsFor('thursday-loop', [0, 3, 4, 7, 8, 13]),
+  friday: weatherStopsFor('friday-san-bernardino', [0, 2, 2, 5, 6, 14]),
+  saturday: weatherStopsFor('saturday-ascona', [0, 1, 3, 4, 5, 8]),
+  sunday: [...weatherStopsFor('sunday-return', [0, 1, 1]), extraWeatherLocations.bellinzona],
+};
 
 // Wednesday's three driving approaches, all aiming at the same 13:00 lunch.
 // Distances and times are the mapped leg to Col des Aravis.
@@ -331,7 +264,7 @@ const approaches = [
     copy: 'Off the Tuesday warm-up, over Col de l’Iseran and down through Bourg-Saint-Maurice.',
     distance: '147 km',
     mapped: '2h 00m',
-    href: mapLinks.wednesdayMorning,
+    href: routeButtons('wednesday-group', 0, 6, 'Group morning')[0].href,
     accent: '#a93e2b',
   },
 ];
@@ -419,7 +352,7 @@ function DayCard({ day }: { day: Day }) {
           </div>
 
           <ol className="route-line mt-9 grid gap-0 sm:grid-cols-3 xl:grid-cols-6">
-            {day.stops.map(({ time, place, note, icon: Icon }) => (
+            {day.stops.map(({ time, place, note, icon: Icon }, index) => (
               <li key={`${time}-${place}`} className="relative min-w-0 border-l border-border pb-6 pl-6 last:pb-0 sm:border-l-0 sm:border-t sm:pb-0 sm:pl-0 sm:pt-6">
                 <span className="route-dot" />
                 <div className="flex items-center gap-1.5 text-[var(--day-color)]">
@@ -428,6 +361,7 @@ function DayCard({ day }: { day: Day }) {
                 </div>
                 <p className="mt-1 truncate font-semibold sm:whitespace-normal">{place}</p>
                 <p className="mt-1 text-xs leading-5 text-muted-foreground">{note}</p>
+                <StopWeather location={dayWeatherStops[day.id]?.[index]} date={`2026-09-${day.date.slice(0, 2)}`} time={time} area={day.id === 'sunday' && index === 1 ? 'Lugano area' : day.id === 'friday' && index === 2 ? 'Valley station' : undefined} />
               </li>
             ))}
           </ol>
@@ -521,9 +455,7 @@ export default function Home() {
                   <div><dt>Distance</dt><dd>{approach.distance}</dd></div>
                   <div><dt>Mapped</dt><dd>{approach.mapped}</dd></div>
                 </dl>
-                <a href={approach.href} target="_blank" rel="noreferrer" className="approach-link">
-                  Open the drive <ArrowUpRight className="size-3.5" />
-                </a>
+                {(approach.id === 'valcenis' ? routeButtons('wednesday-group', 0, 6, 'Open the drive') : [{ href: approach.href, label: 'Open the drive' }]).map(link => <a key={link.href} href={link.href} target="_blank" rel="noreferrer" className="approach-link">{link.label} <ArrowUpRight className="size-3.5" /></a>)}
               </li>
             ))}
           </ol>
@@ -628,7 +560,7 @@ export default function Home() {
               ['London Gatwick', 'Arrive 17:50 UK'],
             ].map(([place, note], index) => (
               <div key={place} className="contents">
-                <div className="homeward-step"><p className="font-semibold">{place}</p><p className="mt-1 text-xs text-muted-foreground">{note}</p></div>
+                <div className="homeward-step"><p className="font-semibold">{place}</p><p className="mt-1 text-xs text-muted-foreground">{note}</p><StopWeather location={[extraWeatherLocations.bellinzona, extraWeatherLocations.malpensa, extraWeatherLocations.gatwick][index]} date="2026-09-17" time={[undefined, '14:15', '17:50'][index]} /></div>
                 {index < 2 ? <ArrowRight className="mx-auto hidden size-4 text-muted-foreground sm:block" /> : null}
               </div>
             ))}

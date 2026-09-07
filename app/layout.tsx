@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Barlow_Condensed, Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import { assetPath, siteUrl } from '@/lib/asset-path';
+import { WeatherProvider } from '@/components/stop-weather';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -50,7 +51,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${barlowCondensed.variable} antialiased`}
       >
-        {children}
+        <WeatherProvider>{children}</WeatherProvider>
       </body>
     </html>
   );

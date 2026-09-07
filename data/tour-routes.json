@@ -13,6 +13,7 @@
       { "time": "", "name": "Refuge Napoléon", "detail": "Izoard stop", "lat": 44.8230728, "lon": 6.7329932 },
       { "time": "", "name": "AVIA Briançon", "detail": "Fuel", "lat": 44.8938438, "lon": 6.6300918 },
       { "time": "", "name": "Exilles", "detail": "Italian waypoint", "lat": 45.0978014, "lon": 6.9291885 },
+      { "time": "", "name": "Mont Cenis approach", "detail": "Roadbook routing point on the D1006", "lat": 45.2155908, "lon": 6.9566783 },
       { "time": "18:47", "name": "Saint Charles · Val Cenis", "detail": "Overnight hotel", "lat": 45.2849656, "lon": 6.8850567 }
     ]
   },
@@ -27,7 +28,7 @@
       { "time": "13:00", "name": "Le Chalet Savoyard · Col des Aravis", "detail": "Lunch and group rendezvous", "lat": 45.872759, "lon": 6.4634548 },
       { "time": "15:57", "name": "Les Saisies", "detail": "Scenic leg", "lat": 45.756431, "lon": 6.541775 },
       { "time": "16:42", "name": "Le Chalet de Roselend", "detail": "Coffee and photo stop", "lat": 45.695036, "lon": 6.6348689 },
-      { "time": "", "name": "Cormet de Roselend", "detail": "Roadbook waypoint", "lat": 45.693806, "lon": 6.658449 },
+      { "time": "", "name": "Roselend photo point", "detail": "Roadbook waypoint above the lake", "lat": 45.693806, "lon": 6.658449 },
       { "time": "", "name": "Hospice du Petit-Saint-Bernard", "detail": "France–Italy crossing", "lat": 45.6714524, "lon": 6.8756012 },
       { "time": "", "name": "Colle del Piccolo San Bernardo", "detail": "Italian side of the pass", "lat": 45.6833134, "lon": 6.8860358 },
       { "time": "18:50", "name": "Chalet Eden · La Thuile", "detail": "Dinner 20:30", "lat": 45.7081906, "lon": 6.9511927 }
@@ -44,7 +45,7 @@
       { "time": "13:00", "name": "Le Chalet Savoyard · Col des Aravis", "detail": "Lunch and group rendezvous", "lat": 45.872759, "lon": 6.4634548 },
       { "time": "15:57", "name": "Les Saisies", "detail": "Scenic leg", "lat": 45.756431, "lon": 6.541775 },
       { "time": "16:42", "name": "Le Chalet de Roselend", "detail": "Coffee and photo stop", "lat": 45.695036, "lon": 6.6348689 },
-      { "time": "", "name": "Cormet de Roselend", "detail": "Roadbook waypoint", "lat": 45.693806, "lon": 6.658449 },
+      { "time": "", "name": "Roselend photo point", "detail": "Roadbook waypoint above the lake", "lat": 45.693806, "lon": 6.658449 },
       { "time": "", "name": "Hospice du Petit-Saint-Bernard", "detail": "France–Italy crossing", "lat": 45.6714524, "lon": 6.8756012 },
       { "time": "", "name": "Colle del Piccolo San Bernardo", "detail": "Italian side of the pass", "lat": 45.6833134, "lon": 6.8860358 },
       { "time": "18:50", "name": "Chalet Eden · La Thuile", "detail": "Dinner 20:30", "lat": 45.7081906, "lon": 6.9511927 }
@@ -62,10 +63,13 @@
       { "time": "", "name": "Col de l’Iseran", "detail": "High pass", "lat": 45.417126, "lon": 7.030626 },
       { "time": "", "name": "Intermarché Bourg-Saint-Maurice", "detail": "Fuel", "lat": 45.623635, "lon": 6.779659 },
       { "time": "", "name": "Cormet de Roselend", "detail": "Roadbook waypoint", "lat": 45.691339, "lon": 6.6906235 },
+      { "time": "", "name": "Roselend photo point", "detail": "Roadbook morning waypoint", "lat": 45.693806, "lon": 6.658449 },
       { "time": "13:14", "name": "Le Chalet Savoyard · Col des Aravis", "detail": "Lunch and rendezvous", "lat": 45.872759, "lon": 6.4634548 },
       { "time": "15:57", "name": "Les Saisies", "detail": "Scenic leg", "lat": 45.756431, "lon": 6.541775 },
       { "time": "16:42", "name": "Le Chalet de Roselend", "detail": "Coffee and photo stop", "lat": 45.695036, "lon": 6.6348689 },
+      { "time": "", "name": "Roselend photo point", "detail": "Roadbook afternoon waypoint", "lat": 45.693806, "lon": 6.658449 },
       { "time": "", "name": "Hospice du Petit-Saint-Bernard", "detail": "France–Italy crossing", "lat": 45.6714524, "lon": 6.8756012 },
+      { "time": "", "name": "Colle del Piccolo San Bernardo", "detail": "Italian side of the pass", "lat": 45.6833134, "lon": 6.8860358 },
       { "time": "18:50", "name": "Chalet Eden · La Thuile", "detail": "Dinner 20:30", "lat": 45.7081906, "lon": 6.9511927 }
     ]
   },
@@ -111,7 +115,7 @@
       { "time": "", "name": "Mesocco", "detail": "San Bernardino approach", "lat": 46.4109835, "lon": 9.2288448 },
       { "time": "", "name": "San Bernardino village", "detail": "Roadbook waypoint", "lat": 46.4361286, "lon": 9.2051555 },
       { "time": "", "name": "San Bernardino Pass", "detail": "High pass", "lat": 46.4959, "lon": 9.17079 },
-      { "time": "", "name": "Albula Pass", "detail": "Late-afternoon pass", "lat": 46.6626282, "lon": 9.5765123 },
+      { "time": "", "name": "Albula / Alvra", "detail": "Village waypoint; this option does not cross Albula Pass", "lat": 46.6626282, "lon": 9.5765123 },
       { "time": "", "name": "Migrol Lantsch/Lenz", "detail": "Fuel", "lat": 46.6896395, "lon": 9.5619604 },
       { "time": "18:50", "name": "Hotel Waldhaus am See", "detail": "Fondue at 20:00", "lat": 46.7445648, "lon": 9.5555085 }
     ]
@@ -127,10 +131,11 @@
       { "time": "", "name": "Grimsel Pass", "detail": "Morning pass", "lat": 46.5614, "lon": 8.33758 },
       { "time": "09:00", "name": "Gelmerbahn", "detail": "Walk from parking; ascent 09:48", "lat": 46.6136385, "lon": 8.3085363 },
       { "time": "", "name": "Gschletterkurve", "detail": "Susten road waypoint", "lat": 46.7424683, "lon": 8.3806647 },
+      { "time": "", "name": "Susten viewpoint", "detail": "Roadbook photo stop", "lat": 46.7330611, "lon": 8.4127499 },
       { "time": "12:21", "name": "Susten Pass", "detail": "Continue toward Oberalp", "lat": 46.7293696, "lon": 8.4470234 },
       { "time": "13:21", "name": "Ustria Alpsu", "detail": "Lunch and route decision", "lat": 46.6587706, "lon": 8.6714017 },
       { "time": "", "name": "Rothenbrunnen", "detail": "Short-route junction", "lat": 46.768871, "lon": 9.419464 },
-      { "time": "", "name": "Albula Pass", "detail": "Optional pass out-and-back", "lat": 46.6626282, "lon": 9.5765123 },
+      { "time": "", "name": "Albula / Alvra", "detail": "Village on the approach to the pass out-and-back", "lat": 46.6626282, "lon": 9.5765123 },
       { "time": "", "name": "Gino Mäder memorial", "detail": "Roadbook waypoint", "lat": 46.5885894, "lon": 9.8841991 },
       { "time": "", "name": "Albula Hospiz", "detail": "Pass stop", "lat": 46.5825598, "lon": 9.8376326 },
       { "time": "", "name": "Migrol Lantsch/Lenz", "detail": "Fuel", "lat": 46.6896395, "lon": 9.5619604 },

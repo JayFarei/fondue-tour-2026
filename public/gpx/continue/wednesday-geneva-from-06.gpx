@@ -10,19 +10,14 @@
   <trk>
     <name>Wed 09 · Geneva · Geneva to the rendezvous, then La Thuile · from Hospice du Petit-Saint-Bernard</name>
     <trkseg>
-      <trkpt lat="45.670601" lon="6.87373" />
-      <trkpt lat="45.670345" lon="6.873722" />
-      <trkpt lat="45.669626" lon="6.873165" />
-      <trkpt lat="45.669432" lon="6.873203" />
-      <trkpt lat="45.66948" lon="6.873481" />
+      <trkpt lat="45.671408" lon="6.875678" />
       <trkpt lat="45.676632" lon="6.881495" />
-      <trkpt lat="45.678926" lon="6.882653" />
-      <trkpt lat="45.6797" lon="6.88332" />
-      <trkpt lat="45.680106" lon="6.884531" />
-      <trkpt lat="45.680321" lon="6.884661" />
-      <trkpt lat="45.680886" lon="6.88458" />
+      <trkpt lat="45.679046" lon="6.882749" />
+      <trkpt lat="45.679762" lon="6.883406" />
+      <trkpt lat="45.679984" lon="6.884358" />
+      <trkpt lat="45.680206" lon="6.884607" />
       <trkpt lat="45.681146" lon="6.884671" />
-      <trkpt lat="45.682086" lon="6.88527" />
+      <trkpt lat="45.683239" lon="6.88622" />
       <trkpt lat="45.684927" lon="6.887589" />
       <trkpt lat="45.685512" lon="6.887829" />
       <trkpt lat="45.686644" lon="6.8886" />
@@ -32,8 +27,8 @@
       <trkpt lat="45.69002" lon="6.889606" />
       <trkpt lat="45.690258" lon="6.890013" />
       <trkpt lat="45.690357" lon="6.891157" />
-      <trkpt lat="45.690788" lon="6.891549" />
-      <trkpt lat="45.691025" lon="6.891579" />
+      <trkpt lat="45.690846" lon="6.891577" />
+      <trkpt lat="45.691056" lon="6.891559" />
       <trkpt lat="45.691158" lon="6.89136" />
       <trkpt lat="45.690916" lon="6.890424" />
       <trkpt lat="45.690887" lon="6.889151" />
@@ -41,7 +36,9 @@
       <trkpt lat="45.691584" lon="6.89076" />
       <trkpt lat="45.691622" lon="6.890214" />
       <trkpt lat="45.691805" lon="6.890124" />
-      <trkpt lat="45.69276" lon="6.890761" />
+      <trkpt lat="45.692374" lon="6.890415" />
+      <trkpt lat="45.692809" lon="6.890815" />
+      <trkpt lat="45.693236" lon="6.891728" />
       <trkpt lat="45.693478" lon="6.891983" />
       <trkpt lat="45.693497" lon="6.893169" />
       <trkpt lat="45.693927" lon="6.894292" />
@@ -87,7 +84,7 @@
       <trkpt lat="45.709193" lon="6.911652" />
       <trkpt lat="45.709411" lon="6.909361" />
       <trkpt lat="45.709505" lon="6.909239" />
-      <trkpt lat="45.709637" lon="6.909304" />
+      <trkpt lat="45.709665" lon="6.909365" />
       <trkpt lat="45.709612" lon="6.911445" />
       <trkpt lat="45.710061" lon="6.912679" />
       <trkpt lat="45.709113" lon="6.915961" />

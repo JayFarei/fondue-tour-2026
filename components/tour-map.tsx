@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { Download, ExternalLink, FileArchive, MapPin, Navigation, Route } from 'lucide-react';
 import routePlans from '@/data/tour-routes.json';
 import { assetPath } from '@/lib/asset-path';
+import { directionsUrl, routeParts } from '@/lib/navigation';
+import { routeDate } from '@/lib/weather';
+import { StopWeather, WeatherStatus } from '@/components/stop-weather';
 
 type Stop = {
   time: string;
@@ -195,24 +198,6 @@ export function FullTourOverview() {
   );
 }
 
-function directionsUrl(stops: Stop[], startIndex: number) {
-  const remaining = stops.slice(startIndex);
-  const coordinate = (stop: Stop) => `${stop.lat},${stop.lon}`;
-
-  if (remaining.length === 1) {
-    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(coordinate(remaining[0]))}`;
-  }
-
-  const params = new URLSearchParams({
-    api: '1',
-    origin: coordinate(remaining[0]),
-    destination: coordinate(remaining.at(-1)!),
-    travelmode: 'driving',
-  });
-  if (remaining.length > 2) params.set('waypoints', remaining.slice(1, -1).map(coordinate).join('|'));
-  return `https://www.google.com/maps/dir/?${params.toString()}`;
-}
-
 function escapeHtml(value: string) {
   return value.replace(/[&<>'"]/g, (character) => ({
     '&': '&amp;',
@@ -273,7 +258,7 @@ export function TourMap() {
         }).addTo(map);
 
         activePlan.stops.forEach((stop, index) => {
-          const navigateUrl = directionsUrl(activePlan.stops, index);
+          const navigateUrl = directionsUrl(activePlan.stops.slice(index, index + 2));
           const gpxUrl = assetPath(`/gpx/continue/${activePlan.id}-from-${String(index + 1).padStart(2, '0')}.gpx`);
           L.circleMarker([stop.lat, stop.lon], {
             radius: index === 0 || index === activePlan.stops.length - 1 ? 8 : 6,
@@ -288,8 +273,8 @@ export function TourMap() {
                 <span>${escapeHtml(stop.time || `Stop ${index + 1}`)}</span>
                 <strong>${escapeHtml(stop.name)}</strong>
                 <small>${escapeHtml(stop.detail)}</small>
-                <a href="${navigateUrl}" target="_blank" rel="noreferrer">Navigate from here ↗</a>
-                <a href="${gpxUrl}" download>Download remaining GPX ↓</a>
+                <a href="${navigateUrl}" target="_blank" rel="noreferrer">${index === activePlan.stops.length - 1 ? 'Open destination' : 'Navigate to next stop'} ↗</a>
+                ${index < activePlan.stops.length - 1 ? `<a href="${gpxUrl}" download>Download remaining GPX ↓</a>` : ''}
               </div>
             `)
             .addTo(map!);
@@ -320,13 +305,15 @@ export function TourMap() {
             <p className="eyebrow">Route navigator</p>
             <h2 className="display-title">Restart from any stop</h2>
             <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Pick a day, then tap the stop you are currently at. The Google Maps link carries forward every remaining waypoint; the companion GPX preserves the remaining TomTom track.
+              Pick a day, then tap your current stop to navigate to the next one. For a longer section, open the numbered Google Maps parts in order. The GPX preserves the full remaining track.
             </p>
           </div>
           <a href={assetPath('/downloads/fondue-tour-2026-tomtom-gpx.zip')} download className="map-button map-button-dark">
             <FileArchive className="size-4" /> Download all TomTom GPX
           </a>
         </div>
+
+        <div className="mb-5"><WeatherStatus /></div>
 
         <div className="mb-4 flex gap-2 overflow-x-auto pb-2" aria-label="Choose route">
           {plans.map((plan) => (
@@ -359,6 +346,9 @@ export function TourMap() {
                 <a href={assetPath(`/gpx/${activePlan.id}.gpx`)} download className="compact-download mt-4 inline-flex items-center gap-2 text-xs font-semibold hover:underline" style={{ color: activePlan.color }}>
                   <Download className="size-3.5" /> Download this full GPX
                 </a>
+                <div className="mt-3 grid gap-2">
+                  {routeParts(activePlan.stops).map((part, i) => <a key={i} href={part.href} target="_blank" rel="noreferrer" className="text-sm underline">Maps part {i + 1}: {part.stops[0].name} → {part.stops.at(-1)!.name}</a>)}
+                </div>
               </div>
 
               <div className="route-restart-scroll max-h-[540px] overflow-y-auto p-2 sm:p-3">
@@ -366,18 +356,18 @@ export function TourMap() {
                 {activePlan.stops.map((stop, index) => {
                   const remaining = activePlan.stops.length - index;
                   return (
-                    <div key={`${stop.name}-${index}`} className="route-restart-row">
-                      <a href={directionsUrl(activePlan.stops, index)} target="_blank" rel="noreferrer" className="route-restart-main">
+                    <div key={`${stop.name}-${index}`} className="route-restart-row flex-wrap">
+                      <a href={directionsUrl(activePlan.stops.slice(index, index + 2))} target="_blank" rel="noreferrer" className="route-restart-main">
                         <span className="route-restart-number" style={{ backgroundColor: activePlan.color }}>{index + 1}</span>
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-semibold leading-5">{stop.name}</span>
                           <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">
-                            {stop.time ? `${stop.time} · ` : ''}{remaining === 1 ? 'Open final stop' : `${remaining - 1} stop${remaining - 1 === 1 ? '' : 's'} remaining`}
+                            {stop.time ? `${stop.time} · ` : ''}{remaining === 1 ? 'Open final stop' : `Next: ${activePlan.stops[index + 1].name}`}
                           </span>
                         </span>
                         <Navigation className="size-4 shrink-0" style={{ color: activePlan.color }} />
                       </a>
-                      <a
+                      {remaining > 1 ? <a
                         href={assetPath(`/gpx/continue/${activePlan.id}-from-${String(index + 1).padStart(2, '0')}.gpx`)}
                         download
                         className="route-restart-gpx"
@@ -385,7 +375,8 @@ export function TourMap() {
                         title="Download the remaining TomTom GPX"
                       >
                         GPX
-                      </a>
+                      </a> : null}
+                      <div className="w-full pb-2 pl-12 pr-3"><StopWeather location={stop} date={routeDate(activePlan.day)} time={stop.time} /></div>
                     </div>
                   );
                 })}
@@ -408,7 +399,7 @@ export function TourMap() {
 
         <div className="mt-5 grid gap-3 text-xs leading-5 text-muted-foreground sm:grid-cols-2">
           <p><strong className="text-foreground">TomTom:</strong> import a downloaded GPX at Plan.TomTom.com → My Items → Routes → Import GPX, then sync it as a track.</p>
-          <p><strong className="text-foreground">Google Maps:</strong> long waypoint lists can be shortened by some mobile clients. If that happens, use the next-stop link again or the complete GPX track.</p>
+          <p><strong className="text-foreground">Google Maps:</strong> each numbered part has at most three intermediate stops for mobile browsers. Open the next part at its starting stop. Google may reroute for closures; the GPX remains an indicative track.</p>
         </div>
 
         <div className="mt-4 flex flex-wrap gap-4 text-xs font-semibold">

@@ -8,10 +8,13 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import elevation from '@/data/tour-elevation.json';
 import stops from '@/data/profile-stops.json';
 import { conditionIcon, StopWeather, useWeather } from '@/components/stop-weather';
-import { forecastAt, routeDate, weatherDescription, weatherKey } from '@/lib/weather';
+import { forecastAt, routeDate, weatherDescription, weatherEmoji, weatherKey } from '@/lib/weather';
 
 const x = (km: number) => 12 + km / elevation.totalKm * 1176;
 const degrees = (n: number) => `${Math.round(n)}°`;
+const precipitationLabel = (reading: ReturnType<typeof forecastAt>) => reading
+  ? `${reading.rain == null ? '—' : Math.round(reading.rain) + '%'} chance · ${reading.precipitation == null ? '— mm' : reading.precipitation.toFixed(1) + ' mm'}${reading.hour ? ' / hour' : ' / day'}`
+  : 'Precipitation unavailable';
 
 export function ProfileWeather({ children }: { children: ReactNode }) {
   const { data, loading, fetchedAt } = useWeather();
@@ -69,6 +72,27 @@ export function ProfileWeather({ children }: { children: ReactNode }) {
         </div>
       </div>
       <div className="profile-weather-panel mx-auto max-w-6xl px-5 sm:px-8">
+        <div className="weather-glance-heading">
+          <h3>Conditions at a glance</h3>
+          <div className="weather-day-picker" aria-label="Forecast day">
+            {elevation.legs.map((leg) => <button key={leg.id} type="button" aria-pressed={stop.leg === leg.id} onClick={() => setSelected(stops.findIndex((point) => point.leg === leg.id))}>{leg.label.split(' · ')[0]}</button>)}
+          </div>
+        </div>
+        <p className="weather-glance-note">Stops in travel order · °C · 💧 precipitation chance and amount. Untimed stops: daily range, maximum hourly chance and day total.</p>
+        <div className="weather-glance-grid">
+          {stops.map((point, i) => {
+            if (point.leg !== stop.leg) return null;
+            const value = readings[i];
+            return <button key={point.id} type="button" className="weather-glance-stop" aria-pressed={selected === i} onClick={() => setSelected(i)}>
+              <span className="weather-glance-name">{point.name}</span>
+              <span className="weather-glance-time">{point.time || 'Daily forecast'}</span>
+              <span className="weather-glance-symbol"><span aria-hidden="true">{weatherEmoji(value?.code)}</span><strong>{value?.temperature != null ? degrees(value.temperature) : value?.low != null && value.high != null ? `${degrees(value.low)}–${degrees(value.high)}` : '—'}</strong></span>
+              <span className="weather-glance-condition">{value ? weatherDescription(value.code) : loading ? 'Loading…' : 'Unavailable'}</span>
+              <span className="weather-glance-rain">💧 {value?.rain != null ? `${Math.round(value.rain)}%${value.hour ? '' : ' max'}` : '—'}</span>
+              <span className="weather-glance-time">{value?.precipitation != null ? `${value.precipitation.toFixed(1)} mm / ${value.hour ? 'hour' : 'day'}` : 'Amount unavailable'}</span>
+            </button>;
+          })}
+        </div>
         <div className="profile-weather-selected" aria-live="polite">
           <div className="profile-weather-controls">
             <button type="button" aria-label="Previous weather stop" disabled={selected === 0} onClick={() => setSelected((i) => i - 1)}><ChevronLeft size={18} /></button>
@@ -81,7 +105,7 @@ export function ProfileWeather({ children }: { children: ReactNode }) {
           </div>
           <div className={`profile-weather-reading weather-tone-${tone}`}>
             <Icon size={22} aria-hidden="true" />
-            <div><p>{loading && !reading ? 'Loading forecast…' : temperature}</p><p className="profile-weather-meta">{reading ? `${weatherDescription(reading.code)} · ${reading.hour ? `${reading.hour} CEST forecast` : 'Daily low–high'}` : 'No forecast available for this stop and date'}</p></div>
+            <div><p>{loading && !reading ? 'Loading forecast…' : temperature}</p><p className="profile-weather-meta">{reading ? `${weatherDescription(reading.code)} · ${reading.hour ? `${reading.hour} CEST forecast` : 'Daily low–high'}` : 'No forecast available for this stop and date'}</p><p className="profile-weather-meta">💧 {precipitationLabel(reading)}</p></div>
           </div>
         </div>
         <p className="profile-weather-help">Tap or hover over a marker, or step through every stop with the arrows. Hollow markers with a bar show daily ranges when an hourly forecast is unavailable or no time is scheduled; hollow markers below the plot have no forecast. Forecasts, not observed conditions. <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>{fetchedAt ? ` · Updated ${new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }).format(new Date(fetchedAt))} CEST` : ''}.</p>

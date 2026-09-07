@@ -39,7 +39,7 @@ for (const plan of [
   plan.stops.forEach((p) => locations.set(weatherKey(p), p));
   dateLocations.set(date, locations);
 }
-const cacheKey = 'fondue-weather-v1';
+const cacheKey = 'fondue-weather-v2';
 
 export const useWeather = () => useContext(WeatherContext);
 
@@ -266,7 +266,7 @@ export function StopWeather({
       <p className="weather-condition">{weatherDescription(at.code)}</p>
       <div className="weather-details">
         <p>{date.slice(8)} Sep · {at.hour ? `~${at.hour}` : 'daily low–high'}</p>
-        {at.rain != null ? <p>{Math.round(at.rain)}% rain</p> : null}
+        {at.rain != null ? <p>{Math.round(at.rain)}% precip. chance{at.hour ? '' : ' · daily max'}</p> : null}
         {area ? <p>{area}</p> : null}
         {stale ? <p>Older forecast</p> : null}
       </div>

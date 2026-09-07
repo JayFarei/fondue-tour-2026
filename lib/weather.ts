@@ -6,15 +6,28 @@ export type Forecast = {
     temperature_2m: (number | null)[];
     weather_code: (number | null)[];
     precipitation_probability: (number | null)[];
+    precipitation?: (number | null)[];
   };
   daily: {
     time: string[];
     temperature_2m_min: (number | null)[];
     temperature_2m_max: (number | null)[];
     weather_code: (number | null)[];
+    precipitation_probability_max?: (number | null)[];
+    precipitation_sum?: (number | null)[];
   };
 };
 export const weatherKey = ({ lat, lon }: WeatherLocation) => `${lat},${lon}`;
+export function weatherEmoji(code: number | null | undefined) {
+  if (code === 0 || code === 1) return '☀️';
+  if (code === 2) return '🌤️';
+  if (code === 3) return '☁️';
+  if (code === 45 || code === 48) return '🌫️';
+  if ([51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(code ?? -1)) return '🌧️';
+  if ([71, 73, 75, 77, 85, 86].includes(code ?? -1)) return '🌨️';
+  if ([95, 96, 99].includes(code ?? -1)) return '⛈️';
+  return '❔';
+}
 export const routeDate = (day: string) =>
   `2026-09-${day.match(/\d{2}/)?.[0] ?? '08'}`;
 export const weatherDescription = (code: number | null | undefined) => {
@@ -52,6 +65,7 @@ export function forecastAt(forecast: Forecast, date: string, time?: string) {
         high,
         code: forecast.hourly.weather_code[index],
         rain: forecast.hourly.precipitation_probability[index],
+        precipitation: forecast.hourly.precipitation?.[index] ?? null,
         hour: hour.slice(11),
       };
     }
@@ -62,7 +76,8 @@ export function forecastAt(forecast: Forecast, date: string, time?: string) {
     low,
     high,
     code: forecast.daily.weather_code[dayIndex],
-    rain: null,
+    rain: forecast.daily.precipitation_probability_max?.[dayIndex] ?? null,
+    precipitation: forecast.daily.precipitation_sum?.[dayIndex] ?? null,
     hour: null,
   };
 }
@@ -71,8 +86,9 @@ export function forecastUrl(locations: WeatherLocation[], date: string) {
   return `https://api.open-meteo.com/v1/forecast?${new URLSearchParams({
     latitude: locations.map((p) => p.lat).join(','),
     longitude: locations.map((p) => p.lon).join(','),
-    hourly: 'temperature_2m,weather_code,precipitation_probability',
-    daily: 'temperature_2m_min,temperature_2m_max,weather_code',
+    hourly: 'temperature_2m,weather_code,precipitation_probability,precipitation',
+    daily: 'temperature_2m_min,temperature_2m_max,weather_code,precipitation_probability_max,precipitation_sum',
+    precipitation_unit: 'mm',
     temperature_unit: 'celsius',
     timezone: 'auto',
     start_date: date,

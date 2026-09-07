@@ -6,6 +6,7 @@ import {
   forecastUrl,
   routeDate,
   weatherDescription,
+  weatherEmoji,
 } from '../lib/weather.ts';
 
 const plans = JSON.parse(
@@ -53,12 +54,15 @@ const fixture = {
     temperature_2m_min: [0],
     temperature_2m_max: [12],
     weather_code: [61],
+    precipitation_probability_max: [80],
+    precipitation_sum: [5.5],
   },
   hourly: {
     time: ['2026-09-10T15:00', '2026-09-10T16:00', '2026-09-11T00:00'],
     temperature_2m: [0, 10, 3],
     weather_code: [0, 2, 3],
     precipitation_probability: [0, 50, 20],
+    precipitation: [0, 0.4, 0.1],
   },
 };
 assert.equal(
@@ -80,6 +84,15 @@ assert.equal(
 );
 assert.equal(weatherDescription(null), 'Conditions unavailable');
 assert.equal(weatherDescription(0), 'Clear');
+assert.equal(weatherEmoji(0), '☀️');
+assert.equal(weatherEmoji(3), '☁️');
+assert.equal(weatherEmoji(61), '🌧️');
+assert.equal(weatherEmoji(null), '❔');
+assert.equal(forecastAt(fixture, '2026-09-10', '15:14').precipitation, 0);
+assert.equal(forecastAt(fixture, '2026-09-10', '15:40').precipitation, 0.4);
+assert.equal(forecastAt(fixture, '2026-09-10', '').precipitation, 5.5);
+assert.equal(forecastAt(fixture, '2026-09-10', '').rain, 80);
+assert.equal(forecastAt({...fixture, daily: {...fixture.daily, precipitation_sum: undefined}}, '2026-09-10', '').precipitation, null);
 const url = new URL(forecastUrl([{ lat: 46, lon: 8 }], '2026-09-10'));
 assert.equal(url.searchParams.get('start_date'), '2026-09-10');
 assert.equal(url.searchParams.get('end_date'), '2026-09-10');

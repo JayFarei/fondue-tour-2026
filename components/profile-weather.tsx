@@ -50,7 +50,20 @@ export function ProfileWeather() {
     left: i === 0 ? 0 : Math.min(maxScroll, x(leg.startKm)),
   })).filter((point, i, all) => i === 0 || point.left > all[i - 1].left + 1);
   const current = destinations.reduce((index, point, i) => scrollLeft >= point.left - 3 ? i : index, 0);
-  const next = destinations[current + 1];
+  // Preview the first day beyond the visible right edge, not after the leftmost day.
+  const visibleRight = scrollLeft + viewportWidth - 68;
+  const nextLeg = viewportWidth > 0
+    ? elevation.legs.find((leg) => x(leg.startKm) > visibleRight + 1)
+    : elevation.legs[1];
+  const next = nextLeg ? {
+    label: nextLeg.label.split(' · ')[0],
+    color: nextLeg.color,
+    left: Math.min(maxScroll, x(nextLeg.startKm)),
+  } : scrollLeft < maxScroll - 3 ? {
+    label: 'Lugano',
+    color: elevation.legs.at(-1)!.color,
+    left: maxScroll,
+  } : undefined;
   const previous = destinations[Math.max(0, current - 1)];
   const jump = (left: number) => scroller.current?.scrollTo({ left, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   const readings = stops.map((stop) => {

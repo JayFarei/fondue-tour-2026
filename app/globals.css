@@ -877,7 +877,6 @@ body { --font-display: var(--font-barlow), 'Barlow Condensed', 'Arial Narrow', s
   width: 5.75rem;
   height: 5.75rem;
   border-radius: 999px;
-  background-image: url('/brand/leg-badges.webp');
   background-size: 300% 200%;
   filter: drop-shadow(0 10px 22px rgb(0 0 0 / 22%));
 }
@@ -885,7 +884,6 @@ body { --font-display: var(--font-barlow), 'Barlow Condensed', 'Arial Narrow', s
 .sprite-icon-practical {
   width: 3rem;
   height: 3rem;
-  background-image: url('/brand/practical-icons.webp');
   background-size: 400% 200%;
 }
 

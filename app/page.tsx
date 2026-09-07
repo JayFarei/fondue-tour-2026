@@ -298,7 +298,7 @@ function SpriteIcon({ kind, index, label }: { kind: 'leg' | 'practical'; index: 
     <>
       <span
         className={`sprite-icon sprite-icon-${kind}`}
-        style={{ backgroundPosition: `${x}% ${row * 100}%` }}
+        style={{ backgroundPosition: `${x}% ${row * 100}%`, backgroundImage: `url("${assetPath(`/brand/${kind === 'leg' ? 'leg-badges' : 'practical-icons'}.webp`)}")` }}
         aria-hidden="true"
       />
       <span className="sr-only">{label}</span>

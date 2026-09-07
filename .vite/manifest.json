@@ -30,7 +30,7 @@
     ]
   },
   "components/tour-map.tsx": {
-    "file": "fondue-tour-2026/_next/static/chunks/tour-map-DC0NJorS.js",
+    "file": "fondue-tour-2026/_next/static/chunks/tour-map-BSP4SNQ5.js",
     "name": "tour-map",
     "src": "components/tour-map.tsx",
     "isDynamicEntry": true,
@@ -54,7 +54,7 @@
     ]
   },
   "node_modules/vinext/dist/shims/image.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/image-BfLC7QDL.js",
+    "file": "fondue-tour-2026/_next/static/chunks/image-DOHTpdh2.js",
     "name": "image",
     "src": "node_modules/vinext/dist/shims/image.js",
     "isDynamicEntry": true,
@@ -65,7 +65,7 @@
     ]
   },
   "node_modules/vinext/dist/shims/internal/app-route-prefetch-policy.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/app-route-prefetch-policy-CFFygNk_.js",
+    "file": "fondue-tour-2026/_next/static/chunks/app-route-prefetch-policy-DIsJ-Dy7.js",
     "name": "app-route-prefetch-policy",
     "src": "node_modules/vinext/dist/shims/internal/app-route-prefetch-policy.js",
     "isDynamicEntry": true,
@@ -74,7 +74,7 @@
     ]
   },
   "node_modules/vinext/dist/shims/layout-segment-context.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/layout-segment-context-DBPLPxkC.js",
+    "file": "fondue-tour-2026/_next/static/chunks/layout-segment-context-BbHWIMW1.js",
     "name": "layout-segment-context",
     "src": "node_modules/vinext/dist/shims/layout-segment-context.js",
     "isDynamicEntry": true,
@@ -95,7 +95,7 @@
     ]
   },
   "virtual:vinext-app-browser-entry": {
-    "file": "fondue-tour-2026/_next/static/chunks/index-DoN1KbSc.js",
+    "file": "fondue-tour-2026/_next/static/chunks/index-Cz1_K2Zi.js",
     "name": "index",
     "src": "virtual:vinext-app-browser-entry",
     "isEntry": true,

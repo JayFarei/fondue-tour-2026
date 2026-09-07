@@ -947,6 +947,29 @@ body { --font-display: var(--font-barlow), 'Barlow Condensed', 'Arial Narrow', s
 
 .stop-weather { margin-top: .6rem; overflow-wrap: anywhere; }
 .stop-weather strong { color: var(--pine); font-variant-numeric: tabular-nums; }
+.weather-grid {
+  display: grid;
+  grid-template-columns: 1.25rem minmax(0, 1fr);
+  grid-template-rows: 1.25rem minmax(2rem, auto) auto;
+  column-gap: .375rem;
+  row-gap: .125rem;
+  align-items: center;
+  color: var(--muted-foreground);
+  font-size: .75rem;
+  line-height: 1rem;
+}
+.weather-condition-icon { width: 1.25rem; height: 1.25rem; grid-column: 1; grid-row: 1; color: var(--weather-icon-color); opacity: .8; }
+.stop-weather .weather-temperature { grid-column: 2; grid-row: 1; font-size: .875rem; font-weight: 500; color: var(--muted-foreground); white-space: nowrap; }
+.weather-condition { grid-column: 1 / -1; grid-row: 2; align-self: start; }
+.weather-details { grid-column: 1 / -1; grid-row: 3; align-self: start; font-size: .75rem; line-height: 1rem; color: var(--muted-foreground); }
+.weather-tone-sun { --weather-icon-color: #927e56; }
+.weather-tone-cloud { --weather-icon-color: #718084; }
+.weather-tone-rain { --weather-icon-color: #63808c; }
+.weather-tone-storm { --weather-icon-color: #98776d; }
+@media (min-width: 640px) {
+  .route-line > li { display: grid; grid-template-rows: subgrid; grid-row: span 4; padding-bottom: 1.5rem; }
+  .route-line > li > .stop-weather { align-self: start; }
+}
 
 .route-restart-main {
   display: flex;

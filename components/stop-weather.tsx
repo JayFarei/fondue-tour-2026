@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
-import { CloudSun } from 'lucide-react';
+import { CloudSun, Sun, Cloud, CloudFog, CloudDrizzle, CloudRain, CloudSnow, CloudLightning, CloudHail, CircleHelp } from 'lucide-react';
 import plans from '@/data/tour-routes.json';
 import {
   extraWeatherLocations,
@@ -40,6 +40,19 @@ for (const plan of [
   dateLocations.set(date, locations);
 }
 const cacheKey = 'fondue-weather-v1';
+
+function conditionIcon(code: number | null | undefined) {
+  if (code === 0 || code === 1) return { Icon: Sun, tone: 'sun' };
+  if (code === 2) return { Icon: CloudSun, tone: 'sun' };
+  if (code === 3) return { Icon: Cloud, tone: 'cloud' };
+  if (code === 45 || code === 48) return { Icon: CloudFog, tone: 'cloud' };
+  if ([51, 53, 55].includes(code ?? -1)) return { Icon: CloudDrizzle, tone: 'rain' };
+  if ([56, 57, 66, 67].includes(code ?? -1)) return { Icon: CloudHail, tone: 'rain' };
+  if ([61, 63, 65, 80, 81, 82].includes(code ?? -1)) return { Icon: CloudRain, tone: 'rain' };
+  if ([71, 73, 75, 77, 85, 86].includes(code ?? -1)) return { Icon: CloudSnow, tone: 'rain' };
+  if ([95, 96, 99].includes(code ?? -1)) return { Icon: CloudLightning, tone: 'storm' };
+  return { Icon: CircleHelp, tone: 'cloud' };
+}
 
 export function WeatherProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<Omit<WeatherState, 'refresh'>>({
@@ -240,20 +253,21 @@ export function StopWeather({
       : `${Math.round(at.temperature)}°C`;
   const stale =
     fetchedAt && Date.now() - Date.parse(fetchedAt) > 60 * 60 * 1000;
+  const { Icon, tone } = conditionIcon(at.code);
   return (
     <div
-      className="stop-weather text-sm leading-5"
+      className={`stop-weather weather-grid weather-tone-${tone}`}
       aria-label={`Forecast ${date}${area ? `, ${area}` : ''}`}
     >
-      <p>
-        <strong>{temperature}</strong> · {weatherDescription(at.code)}
-      </p>
-      <p className="text-xs text-muted-foreground">
-        {date.slice(8)} Sep · {at.hour ? `around ${at.hour}` : 'daily low–high'}
-        {at.rain != null ? ` · ${Math.round(at.rain)}% rain` : ''}
-        {area ? ` · ${area}` : ''}
-        {stale ? ' · Older forecast' : ''}
-      </p>
+      <Icon className="weather-condition-icon" aria-hidden="true" strokeWidth={1.7} />
+      <strong className="weather-temperature">{temperature}</strong>
+      <p className="weather-condition">{weatherDescription(at.code)}</p>
+      <div className="weather-details">
+        <p>{date.slice(8)} Sep · {at.hour ? `~${at.hour}` : 'daily low–high'}</p>
+        {at.rain != null ? <p>{Math.round(at.rain)}% rain</p> : null}
+        {area ? <p>{area}</p> : null}
+        {stale ? <p>Older forecast</p> : null}
+      </div>
     </div>
   );
 }

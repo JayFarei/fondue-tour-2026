@@ -573,72 +573,37 @@ body { --font-display: var(--font-barlow), 'Barlow Condensed', 'Arial Narrow', s
 
 .profile-tally dd span { font-size: 1.1rem; color: rgb(15 31 30 / 50%); }
 
-.profile-scroll {
-  margin-top: 2.25rem;
-  overflow-x: auto;
-  padding-bottom: .5rem;
-  scrollbar-width: thin;
-  scrollbar-color: rgb(23 50 48 / 30%) transparent;
-}
-
-.profile-frame {
-  min-width: 1080px;
-  padding-inline: max(1.25rem, calc((100vw - 72rem) / 2 + 2rem));
-}
-
-.profile-svg { display: block; width: 100%; height: auto; }
-
-.weather-profile-heading { fill: var(--pine); font-size: 11px; font-weight: 700; letter-spacing: .12em; }
-.weather-profile-key { fill: rgb(15 31 30 / 55%); font-size: 10px; }
-.weather-profile-stop { cursor: pointer; outline: none; }
-.weather-profile-stop:focus-visible > circle:last-child { stroke-width: 4; }
-.weather-profile-selection { stroke: var(--pine); stroke-width: 1; stroke-dasharray: 2 4; opacity: .4; pointer-events: none; }
-.profile-weather-panel { margin-top: .75rem; }
-.weather-glance-heading { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
-.weather-glance-heading h3 { font-size: 1rem; font-weight: 600; }
-.weather-day-picker { display: flex; gap: .3rem; }
-.weather-day-picker button { min-height: 44px; padding: .5rem .65rem; font-size: .8rem; border-radius: 5px; cursor: pointer; }
-.weather-day-picker button[aria-pressed="true"] { background: var(--pine); color: #fffdf8; }
-.weather-glance-note { font-size: .75rem; line-height: 1.6; color: rgb(15 31 30 / 65%); margin: .5rem 0 1rem; }
-.conditions-track { position: relative; display: flex; overflow-x: auto; scrollbar-width: thin; scroll-snap-type: x proximity; padding-block: .5rem; }
-.condition-step { position: relative; flex: 0 0 122px; display: flex; flex-direction: column; align-items: center; text-align: center; padding: 0 .5rem .5rem; cursor: pointer; scroll-snap-align: start; color: rgb(15 31 30 / 65%); }
-.condition-step::before { content: ''; position: absolute; top: 43px; left: 0; right: 0; height: 1px; background: rgb(23 50 48 / 16%); }
-.condition-step[aria-pressed="true"] { background: rgb(23 50 48 / 4%); border-radius: 4px; }
-.condition-step[aria-pressed="true"] .condition-step-icon { outline: 1px solid var(--pine); outline-offset: 2px; border-radius: 50%; }
-.condition-day-start { border-left: 1px dashed rgb(23 50 48 / 28%); }
-.condition-step-date, .condition-step-amount { font-size: .75rem; line-height: 1.5; white-space: nowrap; }
-.condition-step-icon { display: grid; place-items: center; position: relative; width: 36px; height: 36px; margin: .4rem 0 .7rem; background: var(--cream, #f4edda); }
-.condition-step-name { font-size: .75rem; line-height: 1.4; min-height: 4.2em; color: var(--pine); overflow-wrap: anywhere; }
-.condition-step-description { font-size: .75rem; line-height: 1.4; min-height: 2.8em; }
-.condition-step-rain { display: flex; align-items: center; gap: .2rem; font-size: .8rem; margin-top: .3rem; }
+.journey-chart { margin: 2rem auto 0; max-width: 1440px; padding-inline: 1.25rem; }
+.journey-toolbar { position: sticky; top: 60px; z-index: 4; background: var(--cream); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem; padding-block: .5rem; margin-bottom: .75rem; }
+.journey-scroll-hint { display: flex; gap: .5rem; align-items: center; font-size: .875rem; color: var(--pine); font-weight: 500; }
+.journey-days { display: flex; gap: .4rem; }
+.journey-days button { padding: .5rem .6rem; min-height: 44px; font-size: .8rem; cursor: pointer; border: 1px solid rgb(23 50 48 / 16%); border-radius: 4px; }
+.journey-days button:hover { background: rgb(23 50 48 / 7%); }
+.journey-window { position: relative; border: 1px solid rgb(23 50 48 / 18%); border-radius: 6px; overflow: hidden; }
+.journey-scroll { display: flex; overflow-x: auto; scrollbar-width: thin; overscroll-behavior-x: contain; }
+.journey-axis { position: sticky; left: 0; z-index: 2; flex: 0 0 68px; background: var(--cream); box-shadow: 4px 0 10px rgb(23 50 48 / 7%); }
+.journey-axis text { fill: var(--pine); font-size: 12px; }
+.journey-axis .journey-axis-title { font-size: 10px; font-weight: 600; letter-spacing: .06em; }
+.journey-plot { display: block; flex: 0 0 3280px; max-width: none; }
+.journey-day-label { font-size: 12px; font-weight: 600; }
+.journey-day-edge { stroke: rgb(23 50 48 / 20%); stroke-width: 1; }
+.journey-terminus { font-family: var(--font-display); font-size: 18px; font-weight: 700; fill: var(--pine); }
+.journey-summit { font-size: 12px; fill: var(--pine); }
+.journey-stop { cursor: pointer; outline: none; }
+.journey-stop-guide { stroke: rgb(23 50 48 / 12%); stroke-dasharray: 2 4; }
+.journey-stop-hit { fill: var(--cream); stroke: none; }
+.journey-stop-hit.selected, .journey-stop:focus-visible .journey-stop-hit { stroke: var(--pine); stroke-width: 1; }
+.journey-rain { font-size: 12px; fill: var(--pine); }
+.journey-amount, .journey-distance { font-size: 11px; fill: rgb(15 31 30 / 65%); }
+.journey-tooltip { position: absolute; bottom: 36px; left: 78px; right: 12px; max-width: 540px; display: flex; align-items: flex-start; gap: .5rem; padding: .75rem; background: #fffdf8; box-shadow: 0 4px 20px rgb(23 50 48 / 14%); border: 1px solid rgb(23 50 48 / 20%); border-radius: 5px; font-size: .8rem; line-height: 1.6; z-index: 3; }
+.journey-tooltip button { min-width: 36px; min-height: 36px; display: grid; place-items: center; cursor: pointer; }
+.journey-note { font-size: .75rem; line-height: 1.7; color: rgb(15 31 30 / 65%); margin-top: .75rem; }
+.journey-note a { text-decoration: underline; }
 @media (max-width: 640px) {
-  .weather-day-picker { width: 100%; justify-content: space-between; gap: 0; }
-  .weather-day-picker button { padding-inline: .4rem; }
-  .profile-weather-controls button { min-width: 44px; min-height: 44px; }
-}
-.profile-weather-selected { display: flex; gap: 1.25rem; align-items: center; border-block: 1px solid rgb(23 50 48 / 15%); padding-block: 1rem; }
-.profile-weather-controls { display: flex; align-items: center; gap: .5rem; flex-shrink: 0; }
-.profile-weather-controls button { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid rgb(23 50 48 / 20%); border-radius: 50%; cursor: pointer; }
-.profile-weather-controls button:disabled { opacity: .3; cursor: default; }
-.profile-weather-controls span { font-size: .7rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.profile-weather-place { flex: 1; min-width: 0; font-size: .9rem; }
-.profile-weather-meta { font-size: .7rem; color: rgb(15 31 30 / 55%); line-height: 1.6; }
-.profile-weather-reading { display: flex; align-items: center; gap: .75rem; font-size: .9rem; max-width: 320px; }
-.profile-weather-reading > svg { flex-shrink: 0; }
-.profile-weather-help { margin-top: .75rem; font-size: .72rem; line-height: 1.7; color: rgb(15 31 30 / 55%); }
-.profile-weather-help a { text-decoration: underline; }
-.profile-weather-all { margin-top: 1rem; font-size: .8rem; }
-.profile-weather-all summary { cursor: pointer; color: var(--pine); }
-.profile-weather-all h3 { margin-block: 1.5rem .75rem; font-weight: 600; }
-.profile-weather-list { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
-.profile-weather-list > div { min-width: 0; padding: .75rem; border: 1px solid rgb(23 50 48 / 12%); border-radius: 6px; }
-.profile-weather-stop-name { text-align: left; cursor: pointer; }
-.profile-weather-stop-name:hover { text-decoration: underline; }
-@media (max-width: 640px) {
-  .profile-weather-selected { flex-wrap: wrap; gap: .75rem; }
-  .profile-weather-place { flex-basis: calc(100% - 130px); }
-  .profile-weather-reading { width: 100%; max-width: none; }
-  .profile-weather-list { grid-template-columns: minmax(0, 1fr); }
+  .journey-chart { padding-inline: .5rem; }
+  .journey-scroll-hint { font-size: .8rem; }
+  .journey-days { width: 100%; justify-content: space-between; gap: .2rem; }
+  .journey-days button { padding-inline: .4rem; }
 }
 
 .profile-grid { stroke: rgb(23 50 48 / 16%); stroke-width: 1; stroke-dasharray: 3 4; }

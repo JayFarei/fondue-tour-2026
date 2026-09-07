@@ -1,135 +1,114 @@
 'use client';
 
-// SVG has no native button/group elements; explicit roles make its markers keyboard accessible.
 /* eslint-disable jsx-a11y/prefer-tag-over-role */
-
-import { useRef, useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight, Droplets } from 'lucide-react';
+// SVG stop groups use explicit button roles for keyboard access.
+import { useRef, useState } from 'react';
+import { ArrowRight, X } from 'lucide-react';
 import elevation from '@/data/tour-elevation.json';
 import stops from '@/data/profile-stops.json';
-import { conditionIcon, StopWeather, useWeather } from '@/components/stop-weather';
+import { conditionIcon, useWeather } from '@/components/stop-weather';
 import { forecastAt, routeDate, weatherDescription, weatherKey } from '@/lib/weather';
 
-const x = (km: number) => 12 + km / elevation.totalKm * 1176;
-const degrees = (n: number) => `${Math.round(n)}°`;
-const precipitationLabel = (reading: ReturnType<typeof forecastAt>) => reading
-  ? `${reading.rain == null ? '—' : Math.round(reading.rain) + '%'} chance · ${reading.precipitation == null ? '— mm' : reading.precipitation.toFixed(1) + ' mm'}${reading.hour ? ' / hour' : ' / day'}`
-  : 'Precipitation unavailable';
+const WIDTH = 3280;
+const HEIGHT = 774;
+const LEFT = 44;
+const RIGHT = WIDTH - 44;
+const x = (km: number) => LEFT + km / elevation.totalKm * (RIGHT - LEFT);
+const mountainY = (m: number) => 308 - m / 2800 * 164;
+const ridge = elevation.points.map(([km, m]) => `${x(km)},${mountainY(m)}`).join(' ');
+const area = `M ${LEFT},308 L ${ridge.replaceAll(' ', ' L ')} L ${RIGHT},308 Z`;
+// Keep exact route positions. Stagger crowded labels vertically, never shift their distance.
+const laneEnds: number[] = [];
+const lanes = stops.map((stop) => {
+  const cx = x(stop.km);
+  let lane = laneEnds.findIndex((end) => cx - end >= 70);
+  if (lane < 0) lane = laneEnds.length;
+  laneEnds[lane] = cx;
+  return lane;
+});
+const degrees = (v: number) => `${Math.round(v)}°`;
 
-export function ProfileWeather({ children }: { children: ReactNode }) {
+export function ProfileWeather() {
   const { data, loading, fetchedAt } = useWeather();
-  const [selected, setSelected] = useState(0);
-  const track = useRef<HTMLDivElement>(null);
-  function selectStop(index: number, reveal = false) {
-    setSelected(index);
-    if (reveal && track.current) {
-      const item = track.current.querySelector<HTMLElement>(`[data-stop="${index}"]`);
-      if (item) track.current.scrollTo({ left: item.offsetLeft - track.current.clientWidth / 2 + item.clientWidth / 2, behavior: 'smooth' });
-    }
-  }
+  const scroller = useRef<HTMLDivElement>(null);
+  const [selected, setSelected] = useState<number | null>(null);
   const readings = stops.map((stop) => {
     const date = routeDate(stop.day);
     const forecast = data[`${date}/${weatherKey(stop)}`];
     return forecast ? forecastAt(forecast, date, stop.time) : null;
   });
-  const values = readings.flatMap((reading) => reading ? [reading.temperature, reading.low, reading.high].filter((v): v is number => v != null && Number.isFinite(v)) : []);
+  const values = readings.flatMap((r) => r ? [r.temperature, r.low, r.high].filter((n): n is number => n != null && Number.isFinite(n)) : []);
   const min = Math.floor(Math.min(0, ...values) / 5) * 5;
-  const max = Math.max(min + 10, Math.ceil(Math.max(20, ...values) / 5) * 5);
-  const y = (temp: number) => 158 - (temp - min) / (max - min) * 105;
+  const max = Math.max(20, Math.ceil(Math.max(20, ...values) / 5) * 5);
+  const tempY = (v: number) => 445 - (v - min) / (max - min) * 100;
   const ticks = Array.from({ length: (max - min) / 5 + 1 }, (_, i) => min + i * 5);
-  const stop = stops[selected];
-  const reading = readings[selected];
-  const { Icon, tone } = conditionIcon(reading?.code);
-  const temperature = reading?.temperature != null ? `${degrees(reading.temperature)}C` : reading?.low != null && reading.high != null ? `${degrees(reading.low)}–${degrees(reading.high)}C` : 'Temperature unavailable';
-  const dayLabel = (day: string) => day.split(' · ')[0];
-
+  const temperature = (r: ReturnType<typeof forecastAt>) => r?.temperature != null ? degrees(r.temperature) : r?.low != null && r.high != null ? `${degrees(r.low)}–${degrees(r.high)}` : '—';
+  const describe = (i: number) => {
+    const stop = stops[i], r = readings[i];
+    return `${stop.day.split(' · ')[0]} · ${stop.time || 'Daily forecast'} · ${stop.name} · ${Math.round(stop.km)} km · ${temperature(r)}C · ${weatherDescription(r?.code)} · ${r?.rain != null ? Math.round(r.rain) + '%' : 'Unknown'} precipitation chance${r && !r.hour ? ' (daily maximum)' : ''} · ${r?.precipitation != null ? r.precipitation.toFixed(1) + ' mm' : 'Amount unavailable'}${r ? r.hour ? ' in forecast hour' : ' over day' : ''}`;
+  };
   return (
-    <>
-      <div className="profile-scroll">
-        <div className="profile-frame">
-          {children}
-          <svg className="profile-svg weather-profile" viewBox="0 0 1200 188" role="group" aria-label="Stop-by-stop weather on the same distance scale as the elevation profile. Select a marker for temperature and conditions; all stops are also listed below.">
-            <text x="12" y="25" className="weather-profile-heading">WEATHER ALONG THE ROUTE</text>
-            <text x="1188" y="25" textAnchor="end" className="weather-profile-key">● nearest hour · │ daily low–high · °C</text>
-            {ticks.map((temp) => <g key={temp}>
-              <line x1="12" x2="1188" y1={y(temp)} y2={y(temp)} className="profile-grid" />
-              <text x="1188" y={y(temp) - 4} textAnchor="end" className="profile-grid-label">{degrees(temp)}</text>
+    <div className="journey-chart">
+      <div className="journey-toolbar">
+        <p className="journey-scroll-hint"><ArrowRight size={18} aria-hidden="true" /> Swipe / scroll right through the road trip</p>
+        <div className="journey-days" aria-label="Jump along the chart">
+          {elevation.legs.map((leg) => <button key={leg.id} type="button" onClick={() => scroller.current?.scrollTo({ left: Math.max(0, x(leg.startKm) - 24), behavior: 'smooth' })}>{leg.label.split(' · ')[0]}</button>)}
+        </div>
+      </div>
+      <div className="journey-window">
+        <div className="journey-scroll" ref={scroller} role="group" aria-label="Scrollable elevation, temperature, conditions and precipitation chart">
+          <svg className="journey-axis" width="68" height={HEIGHT} viewBox={`0 0 68 ${HEIGHT}`} aria-label="Pinned elevation and temperature scales">
+            <text x="8" y="24" className="journey-axis-title">ROUTE</text>
+            <text x="8" y="134" className="journey-axis-title">METRES</text>
+            {[0, 1000, 2000].map((m) => <text key={m} x="58" y={mountainY(m) + 4} textAnchor="end">{m.toLocaleString('en-GB')}</text>)}
+            <text x="8" y="332" className="journey-axis-title">TEMP °C</text>
+            {ticks.map((v) => <text key={v} x="58" y={tempY(v) + 4} textAnchor="end">{degrees(v)}</text>)}
+            <text x="8" y="485" className="journey-axis-title">SKY</text>
+            <text x="8" y="503" className="journey-axis-title">RAIN %</text>
+            <text x="8" y="521" className="journey-axis-title">mm</text>
+            <text x="8" y={HEIGHT - 12} className="journey-axis-title">KM</text>
+          </svg>
+          <svg className="journey-plot" width={WIDTH} height={HEIGHT} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="group" aria-label="All 48 stops aligned to the same route distance across mountains, temperature and weather">
+            <defs><linearGradient id="journey-gold" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stopColor="#f0c14e" /><stop offset="1" stopColor="#e2a92f" /></linearGradient></defs>
+            {elevation.legs.map((leg) => <g key={leg.id}>
+              <rect x={x(leg.startKm)} y="0" width={x(leg.endKm) - x(leg.startKm)} height="30" fill={leg.color} opacity=".16" />
+              <text x={x(leg.startKm) + 8} y="20" className="journey-day-label" fill={leg.color}>{leg.label.split(' · ')[0]}</text>
+              <line x1={x(leg.startKm)} x2={x(leg.startKm)} y1="30" y2={HEIGHT - 30} className="journey-day-edge" />
             </g>)}
-            {elevation.legs.map((leg) => <line key={leg.id} x1={x(leg.endKm)} x2={x(leg.endKm)} y1="40" y2="166" className="profile-grid" />)}
-            {readings.map((value, i) => {
-              const point = stops[i];
-              const cx = x(point.km);
-              const cy = value?.temperature != null ? y(value.temperature) : value?.high != null ? y(value.high) : 174;
-              const color = elevation.legs.find((leg) => leg.id === point.leg)!.color;
-              const label = `${dayLabel(point.day)} ${point.time || 'untimed'} · ${point.name} · ${value?.temperature != null ? degrees(value.temperature) + 'C' : value?.low != null && value.high != null ? degrees(value.low) + '–' + degrees(value.high) + 'C daily range' : loading ? 'Loading forecast' : 'Forecast unavailable'} · ${weatherDescription(value?.code)}`;
-              return <g key={point.id} role="button" tabIndex={0} aria-label={label} aria-pressed={selected === i} className="weather-profile-stop" onClick={() => setSelected(i)} onFocus={() => setSelected(i)} onMouseEnter={() => setSelected(i)} onKeyDown={(event) => {
-                if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelected(i); }
-              }}>
-                <title>{label}</title>
-                <circle cx={cx} cy={cy} r="10" fill="transparent" />
-                {value?.temperature == null && value?.low != null && value.high != null ? <g stroke={color} strokeWidth="2" opacity=".65">
-                  <line x1={cx} x2={cx} y1={y(value.low)} y2={y(value.high)} />
-                  <line x1={cx - 3} x2={cx + 3} y1={y(value.low)} y2={y(value.low)} />
-                  <line x1={cx - 3} x2={cx + 3} y1={cy} y2={cy} />
-                </g> : null}
-                <circle cx={cx} cy={cy} r={selected === i ? 5 : 3} fill={value?.temperature != null ? color : '#fffdf8'} stroke={color} strokeWidth={selected === i ? 2 : 1.3} />
+            {[0, 1000, 2000].map((m) => <line key={m} x1={LEFT} x2={RIGHT} y1={mountainY(m)} y2={mountainY(m)} className="profile-grid" />)}
+            <path d={area} fill="url(#journey-gold)" /><polyline points={ridge} className="profile-ridge" />
+            <text x={LEFT} y="62" className="journey-terminus">ZÜRICH</text>
+            <text x={RIGHT} y="62" textAnchor="end" className="journey-terminus">LUGANO</text>
+            {elevation.summits.map((summit, i) => <g key={i}>
+              <line x1={x(summit.km)} x2={x(summit.km)} y1="139" y2={mountainY(summit.sampled)} className="profile-leader" />
+              <text x={x(summit.km)} y="122" transform={`rotate(-45 ${x(summit.km)} 122)`} className="journey-summit"><tspan>{summit.name}</tspan><tspan x={x(summit.km)} dy="14">{summit.altitude.toLocaleString('en-GB')} m</tspan></text>
+              <circle cx={x(summit.km)} cy={mountainY(summit.sampled)} r="2.5" fill="#8a6410" />
+            </g>)}
+            {ticks.map((v) => <line key={v} x1={LEFT} x2={RIGHT} y1={tempY(v)} y2={tempY(v)} className="profile-grid" />)}
+            <line x1={LEFT} x2={RIGHT} y1="464" y2="464" className="journey-day-edge" />
+            {stops.map((stop, i) => {
+              const r = readings[i], cx = x(stop.km), rowY = 485 + lanes[i] * 62;
+              const { Icon, tone } = conditionIcon(r?.code);
+              const cy = r?.temperature != null ? tempY(r.temperature) : r?.high != null ? tempY(r.high) : 454;
+              const color = elevation.legs.find((leg) => leg.id === stop.leg)!.color;
+              return <g key={stop.id} data-km={stop.km} data-weather-stop={i} role="button" tabIndex={0} aria-label={describe(i)} className={`journey-stop weather-tone-${tone}`} onClick={() => setSelected(i)} onKeyDown={(event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setSelected(i); } }}>
+                <title>{describe(i)}</title>
+                <line x1={cx} x2={cx} y1={cy + 5} y2={rowY - 12} className="journey-stop-guide" />
+                {r?.temperature == null && r?.low != null && r.high != null ? <line x1={cx} x2={cx} y1={tempY(r.low)} y2={tempY(r.high)} stroke={color} strokeWidth="2" /> : null}
+                <circle cx={cx} cy={cy} r="4" fill={r?.temperature != null ? color : '#f4ecda'} stroke={color} strokeWidth="1.5" />
+                <rect x={cx - 24} y={rowY - 12} width="48" height="58" rx="4" className={selected === i ? 'journey-stop-hit selected' : 'journey-stop-hit'} />
+                <Icon x={cx - 10} y={rowY - 10} width="20" height="20" strokeWidth={1.7} aria-hidden="true" />
+                <text x={cx} y={rowY + 25} textAnchor="middle" className="journey-rain">{r?.rain != null ? Math.round(r.rain) + '%' : '—'}</text>
+                <text x={cx} y={rowY + 41} textAnchor="middle" className="journey-amount">{r?.precipitation != null ? r.precipitation.toFixed(1) : '—'}{r && !r.hour ? '*' : ''}</text>
               </g>;
             })}
-            <line x1={x(stop.km)} x2={x(stop.km)} y1="39" y2="181" className="weather-profile-selection" />
+            <line x1={LEFT} x2={RIGHT} y1={HEIGHT - 30} y2={HEIGHT - 30} className="journey-day-edge" />
+            {Array.from({ length: 15 }, (_, i) => i * 100).map((km) => <text key={km} x={x(km)} y={HEIGHT - 12} textAnchor="middle" className="journey-distance">{km}</text>)}
           </svg>
         </div>
+        {selected != null ? <div className="journey-tooltip" role="status"><span>{describe(selected)}</span><button type="button" aria-label="Close stop details" onClick={() => setSelected(null)}><X size={18} /></button></div> : null}
       </div>
-      <div className="profile-weather-panel mx-auto max-w-6xl px-5 sm:px-8">
-        <div className="weather-glance-heading">
-          <h3>Conditions along the route</h3>
-          <div className="weather-day-picker" aria-label="Forecast day">
-            {elevation.legs.map((leg) => <button key={leg.id} type="button" aria-pressed={stop.leg === leg.id} onClick={() => selectStop(stops.findIndex((point) => point.leg === leg.id), true)}>{leg.label.split(' · ')[0]}</button>)}
-          </div>
-        </div>
-        <p className="weather-glance-note">Swipe through the conditions, or jump to a day. Stops are evenly spaced here, in travel order; the chart above uses distance.</p>
-        <div className="conditions-track" ref={track} role="group" aria-label="Weather condition evolution across all 48 stops">
-          {stops.map((point, i) => {
-            const value = readings[i];
-            const { Icon: ConditionIcon, tone: conditionTone } = conditionIcon(value?.code);
-            return <button key={point.id} data-stop={i} type="button" className={`condition-step weather-tone-${conditionTone}${i === 0 || point.leg !== stops[i - 1].leg ? ' condition-day-start' : ''}`} aria-pressed={selected === i} onClick={() => selectStop(i)} title={`${point.name} · ${weatherDescription(value?.code)} · ${precipitationLabel(value)}`}>
-              <span className="condition-step-date">{dayLabel(point.day)} · {point.time || 'daily'}</span>
-              <span className="condition-step-icon"><ConditionIcon size={22} strokeWidth={1.7} aria-hidden="true" /></span>
-              <span className="condition-step-name">{point.name}</span>
-              <span className="condition-step-description">{value ? weatherDescription(value.code) : loading ? 'Loading…' : 'Unavailable'}</span>
-              <span className="condition-step-rain"><Droplets size={13} aria-hidden="true" /> {value?.rain != null ? `${Math.round(value.rain)}%${value.hour ? '' : ' max'}` : '—'}</span>
-              <span className="condition-step-amount">{value?.precipitation != null ? `${value.precipitation.toFixed(1)} mm / ${value.hour ? 'hour' : 'day'}` : 'Amount unavailable'}</span>
-            </button>;
-          })}
-        </div>
-        <p className="weather-glance-note">Precipitation: chance and amount. Untimed stops show the day’s maximum hourly chance and total amount.</p>
-        <div className="profile-weather-selected" aria-live="polite">
-          <div className="profile-weather-controls">
-            <button type="button" aria-label="Previous weather stop" disabled={selected === 0} onClick={() => selectStop(selected - 1, true)}><ChevronLeft size={18} /></button>
-            <span>{selected + 1} / {stops.length}</span>
-            <button type="button" aria-label="Next weather stop" disabled={selected === stops.length - 1} onClick={() => selectStop(selected + 1, true)}><ChevronRight size={18} /></button>
-          </div>
-          <div className="profile-weather-place">
-            <p className="profile-weather-meta">{dayLabel(stop.day)} · {stop.time || 'Untimed stop'} · {Math.round(stop.km)} km</p>
-            <p>{stop.name}</p>
-          </div>
-          <div className={`profile-weather-reading weather-tone-${tone}`}>
-            <Icon size={22} aria-hidden="true" />
-            <div><p>{loading && !reading ? 'Loading forecast…' : temperature}</p><p className="profile-weather-meta">{reading ? `${weatherDescription(reading.code)} · ${reading.hour ? `${reading.hour} CEST forecast` : 'Daily low–high'}` : 'No forecast available for this stop and date'}</p><p className="profile-weather-meta">{precipitationLabel(reading)}</p></div>
-          </div>
-        </div>
-        <p className="profile-weather-help">Tap or hover over a marker, or step through every stop with the arrows. Hollow markers with a bar show daily ranges when an hourly forecast is unavailable or no time is scheduled; hollow markers below the plot have no forecast. Forecasts, not observed conditions. <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>{fetchedAt ? ` · Updated ${new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }).format(new Date(fetchedAt))} CEST` : ''}.</p>
-        <details className="profile-weather-all">
-          <summary>All {stops.length} stop forecasts</summary>
-          {elevation.legs.map((leg) => <section key={leg.id}>
-            <h3>{leg.label.replace(' · Long', '').replace(' · You', '')} · {leg.start} → {leg.end}</h3>
-            <div className="profile-weather-list">{stops.map((point, i) => point.leg === leg.id ? <div key={point.id}>
-              <button type="button" onClick={() => setSelected(i)} className="profile-weather-stop-name">{point.name}</button>
-              <p className="profile-weather-meta">{point.time || 'Untimed'} · {Math.round(point.km)} km</p>
-              <StopWeather location={point} date={routeDate(point.day)} time={point.time} />
-            </div> : null)}</div>
-          </section>)}
-        </details>
-      </div>
-    </>
+      <p className="journey-note">One distance scale · Tap a weather icon for the stop and forecast time · Temperature dots: nearest hour; bars: daily low–high · Rain: chance and mm in forecast hour; * daily maximum chance and day total. {loading ? 'Loading forecasts…' : ''} <a href="https://open-meteo.com/" target="_blank" rel="noreferrer">Open-Meteo</a>{fetchedAt ? ` · Updated ${new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }).format(new Date(fetchedAt))} CEST` : ''}.</p>
+    </div>
   );
 }

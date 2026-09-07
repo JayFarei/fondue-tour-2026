@@ -10,6 +10,7 @@ async (page) => {
     await page.setViewportSize({ width, height: 1000 });
     await page.reload();
     await page.locator('.journey-scroll').evaluate((e) => e.scrollTo({ left: 0, behavior: 'instant' }));
+    const maxScroll = await page.locator('.journey-scroll').evaluate((e) => e.scrollWidth - e.clientWidth);
     const forward = page.locator('.journey-next-preview');
     const back = page.locator('.journey-previous');
     await forward.scrollIntoViewIfNeeded();
@@ -26,7 +27,11 @@ async (page) => {
       // Reduced motion makes arrival immediate, while a frame allows React to settle.
       await page.evaluate(() => new Promise(requestAnimationFrame));
       const left = await page.locator('.journey-scroll').evaluate((e) => e.scrollLeft);
-      assert(Math.abs(left - targets[day]) < 3, `${width}px: expected day ${day + 1} at ${targets[day].toFixed(1)}px; got ${left}px`);
+      const expected = Math.min(targets[day], maxScroll);
+      assert(Math.abs(left - expected) < 3, `${width}px: expected day ${day + 1} at ${expected.toFixed(1)}px; got ${left}px`);
+      assert(await page.locator('.journey-chart-nav').getAttribute('data-current-day') === String(day), `Expected selected day ${day + 1}`);
+      const blank = await page.locator('.journey-scroll').evaluate((e) => e.getBoundingClientRect().right - document.querySelector('.journey-plot').getBoundingClientRect().right);
+      assert(blank < 1, `${width}px: scrolled ${blank}px beyond the chart into empty padding`);
       await checkBox();
     };
     for (let day = 1; day <= 4; day++) await clickAndCheck(forwardBox, day);
@@ -45,14 +50,14 @@ async (page) => {
   const forwardBox = await forward.locator('svg').boundingBox();
   const backBox = await back.locator('svg').boundingBox();
   for (let i = 0; i < 4; i++) await page.mouse.click(forwardBox.x + forwardBox.width / 2, forwardBox.y + forwardBox.height / 2);
-  await page.waitForFunction((target) => Math.abs(document.querySelector('.journey-scroll').scrollLeft - target) < 3, targets[4]);
+  await page.waitForFunction((target) => { const e = document.querySelector('.journey-scroll'); return Math.abs(e.scrollLeft - Math.min(target, e.scrollWidth - e.clientWidth)) < 3; }, targets[4]);
   for (let i = 0; i < 4; i++) await page.mouse.click(backBox.x + backBox.width / 2, backBox.y + backBox.height / 2);
   await page.waitForFunction(() => document.querySelector('.journey-scroll').scrollLeft < 3);
   // A manual pan re-establishes the current day before the next click.
   await page.locator('.journey-scroll').evaluate((e) => e.scrollTo({ left: 1500, behavior: 'instant' }));
   await page.waitForFunction(() => document.querySelector('.journey-chart-nav').getAttribute('data-current-day') === '1');
   await page.mouse.click(forwardBox.x + forwardBox.width / 2, forwardBox.y + forwardBox.height / 2);
-  await page.waitForFunction((target) => Math.abs(document.querySelector('.journey-scroll').scrollLeft - target) < 3, targets[2]);
+  await page.waitForFunction((target) => { const e = document.querySelector('.journey-scroll'); return Math.abs(e.scrollLeft - Math.min(target, e.scrollWidth - e.clientWidth)) < 3; }, targets[2]);
   results.push({ rapidClicks: 'forward and back passed', manualPanThenNext: 'passed' });
   return results;
 }

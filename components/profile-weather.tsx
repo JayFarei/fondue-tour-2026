@@ -10,10 +10,10 @@ import { conditionIcon, useWeather } from '@/components/stop-weather';
 import { forecastAt, routeDate, weatherDescription, weatherKey } from '@/lib/weather';
 import { temperatureColor } from '@/lib/temperature-color';
 
-const WIDTH = 3280;
+const WIDTH = 3236;
 const HEIGHT = 774;
 const LEFT = 0;
-const RIGHT = WIDTH - 44;
+const RIGHT = WIDTH;
 const x = (km: number) => LEFT + km / elevation.totalKm * (RIGHT - LEFT);
 const mountainY = (m: number) => 308 - m / 2800 * 164;
 const ridge = elevation.points.map(([km, m]) => `${x(km)},${mountainY(m)}`).join(' ');
@@ -46,8 +46,7 @@ export function ProfileWeather() {
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  // Give the final short days distinct scroll positions instead of clamping both to the end.
-  const tailWidth = Math.max(0, viewportWidth - 68 - (WIDTH - dayOffsets.at(-1)!));
+  const maxScroll = Math.max(0, WIDTH + 68 - viewportWidth);
   const nextLeg = elevation.legs[currentDay + 1];
   const navigationColor = nextLeg?.color ?? elevation.legs.at(-1)!.color;
   const changeDay = (day: number) => {
@@ -58,7 +57,7 @@ export function ProfileWeather() {
     setScrollLeft(left);
     if (pendingDay.current != null) {
       // Ignore intermediate animation frames: another click advances the intended day.
-      if (Math.abs(left - dayOffsets[pendingDay.current]) < 3) pendingDay.current = null;
+      if (Math.abs(left - Math.min(maxScroll, dayOffsets[pendingDay.current])) < 3) pendingDay.current = null;
       return;
     }
     changeDay(dayOffsets.reduce((day, offset, i) => left >= offset - 3 ? i : day, 0));
@@ -72,10 +71,11 @@ export function ProfileWeather() {
   };
   const jump = (direction: number) => {
     const day = Math.max(0, Math.min(elevation.legs.length - 1, currentDayRef.current + direction));
-    pendingDay.current = day;
+    const target = Math.min(maxScroll, dayOffsets[day]);
+    pendingDay.current = Math.abs((scroller.current?.scrollLeft ?? 0) - target) < 3 ? null : day;
     changeDay(day);
     setSelected(null);
-    scroller.current?.scrollTo({ left: dayOffsets[day], behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
+    scroller.current?.scrollTo({ left: target, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth' });
   };
   const readings = stops.map((stop) => {
     const date = routeDate(stop.day);
@@ -100,7 +100,7 @@ export function ProfileWeather() {
       <div className="journey-window">
         <div className="journey-chart-nav" data-current-day={currentDay} aria-label="Chart day navigation" style={{ backgroundColor: `color-mix(in srgb, ${navigationColor} 16%, var(--cream))`, color: navigationColor }}>
           <button type="button" className="journey-previous" aria-label="Previous day in chart" disabled={currentDay === 0 && scrollLeft < 3} onClick={() => jump(-1)}><ArrowLeft size={16} /></button>
-          <button type="button" className="journey-next-preview" disabled={!nextLeg} aria-label={nextLeg ? `Next day: ${nextLeg.label.split(' · ')[0]}` : 'End of route'} title={nextLeg ? `Scroll to ${nextLeg.label.split(' · ')[0]}` : 'End of route'} onClick={() => jump(1)}><span>{nextLeg?.label.split(' · ')[0] ?? 'Lugano'}</span><ArrowRight size={14} /></button>
+          <button type="button" className="journey-next-preview" disabled={!nextLeg} aria-label={nextLeg ? `Next day: ${nextLeg.label.split(' · ')[0]}` : 'End of route'} title={nextLeg ? `Scroll to ${nextLeg.label.split(' · ')[0]}` : 'End of route'} onClick={() => jump(1)}><span>{(nextLeg ?? elevation.legs[currentDay]).label.split(' · ')[0]}</span><ArrowRight size={14} /></button>
         </div>
         <div className="journey-scroll" ref={scroller} onScroll={(event) => trackScroll(event.currentTarget.scrollLeft)} onWheel={interruptPan} onTouchStart={interruptPan} role="group" aria-label="Scrollable elevation, temperature, conditions and precipitation chart">
           <svg className="journey-axis" style={{ boxShadow: scrollLeft < 1 ? 'none' : undefined }} width="68" height={HEIGHT} viewBox={`0 0 68 ${HEIGHT}`} aria-label="Pinned elevation and temperature scales">
@@ -121,8 +121,9 @@ export function ProfileWeather() {
                 {[max, 22.01, 22, 18, 17.99, min].map((v) => <stop key={v} offset={(max - v) / (max - min)} stopColor={temperatureColor(v)} />)}
               </linearGradient>
             </defs>
-            {elevation.legs.map((leg) => <g key={leg.id}>
+            {elevation.legs.map((leg, index) => <g key={leg.id}>
               <rect x={x(leg.startKm)} y="0" width={x(leg.endKm) - x(leg.startKm)} height="30" fill={leg.color} opacity=".16" />
+              {index === currentDay ? <line x1={x(leg.startKm)} x2={x(leg.endKm)} y1="31" y2="31" stroke={leg.color} strokeWidth="2" /> : null}
               <text x={x(leg.startKm) + 8} y="20" className="journey-day-label" fill={leg.color}>{leg.label.split(' · ')[0]}</text>
               <line x1={x(leg.startKm)} x2={x(leg.startKm)} y1="30" y2={HEIGHT - 30} className="journey-day-edge" />
             </g>)}
@@ -143,7 +144,7 @@ export function ProfileWeather() {
             {stops.map((stop, i) => {
               const r = readings[i], cx = x(stop.km), rowY = 485 + lanes[i] * 62;
               // Inset only the edge annotation; the route and temperature still begin at 0 km.
-              const labelX = Math.max(24, cx);
+              const labelX = Math.min(RIGHT - 24, Math.max(24, cx));
               const { Icon, tone } = conditionIcon(r?.code);
               const cy = r?.temperature != null ? tempY(r.temperature) : r?.high != null ? tempY(r.high) : 454;
               const color = temperatureColor(r?.temperature ?? r?.high);
@@ -161,7 +162,6 @@ export function ProfileWeather() {
             <line x1={LEFT} x2={RIGHT} y1={HEIGHT - 30} y2={HEIGHT - 30} className="journey-day-edge" />
             {Array.from({ length: 15 }, (_, i) => i * 100).map((km) => <text key={km} x={x(km) + (km === 0 ? 8 : 0)} y={HEIGHT - 12} textAnchor={km === 0 ? 'start' : 'middle'} className="journey-distance">{km}</text>)}
           </svg>
-          <div className="journey-end-space" aria-hidden="true" style={{ flex: `0 0 ${tailWidth}px` }} />
         </div>
         {selected != null ? <div className="journey-tooltip" role="status"><span>{describe(selected)}</span><button type="button" aria-label="Close stop details" onClick={() => setSelected(null)}><X size={18} /></button></div> : null}
       </div>

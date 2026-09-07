@@ -592,7 +592,7 @@ body { --font-display: var(--font-barlow), 'Barlow Condensed', 'Arial Narrow', s
 .journey-axis { position: sticky; left: 0; z-index: 2; flex: 0 0 68px; background: var(--cream); box-shadow: 4px 0 10px rgb(23 50 48 / 7%); }
 .journey-axis text { fill: var(--pine); font-size: 12px; }
 .journey-axis .journey-axis-title { font-size: 10px; font-weight: 600; letter-spacing: .06em; }
-.journey-plot { display: block; flex: 0 0 3280px; max-width: none; }
+.journey-plot { display: block; flex: 0 0 3236px; max-width: none; }
 .journey-day-label { font-size: 12px; font-weight: 600; }
 .journey-day-edge { stroke: rgb(23 50 48 / 20%); stroke-width: 1; }
 .journey-terminus { font-family: var(--font-display); font-size: 18px; font-weight: 700; fill: var(--pine); }

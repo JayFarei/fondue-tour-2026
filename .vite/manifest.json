@@ -19,7 +19,7 @@
     "name": "rolldown-runtime"
   },
   "components/profile-weather.tsx": {
-    "file": "fondue-tour-2026/_next/static/chunks/profile-weather-DJ7ePfPc.js",
+    "file": "fondue-tour-2026/_next/static/chunks/profile-weather-BnWesp-j.js",
     "name": "profile-weather",
     "src": "components/profile-weather.tsx",
     "isDynamicEntry": true,
@@ -41,7 +41,7 @@
     ]
   },
   "components/tour-map.tsx": {
-    "file": "fondue-tour-2026/_next/static/chunks/tour-map-Dp5jCmUp.js",
+    "file": "fondue-tour-2026/_next/static/chunks/tour-map-BJqV4INu.js",
     "name": "tour-map",
     "src": "components/tour-map.tsx",
     "isDynamicEntry": true,
@@ -65,7 +65,7 @@
     ]
   },
   "node_modules/vinext/dist/shims/image.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/image-C_GYwxHq.js",
+    "file": "fondue-tour-2026/_next/static/chunks/image-BGy8vp6w.js",
     "name": "image",
     "src": "node_modules/vinext/dist/shims/image.js",
     "isDynamicEntry": true,
@@ -76,7 +76,7 @@
     ]
   },
   "node_modules/vinext/dist/shims/internal/app-route-prefetch-policy.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/app-route-prefetch-policy-BO93hv8P.js",
+    "file": "fondue-tour-2026/_next/static/chunks/app-route-prefetch-policy-D2VWN1iF.js",
     "name": "app-route-prefetch-policy",
     "src": "node_modules/vinext/dist/shims/internal/app-route-prefetch-policy.js",
     "isDynamicEntry": true,
@@ -85,7 +85,7 @@
     ]
   },
   "node_modules/vinext/dist/shims/layout-segment-context.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/layout-segment-context-D_H-6p7Z.js",
+    "file": "fondue-tour-2026/_next/static/chunks/layout-segment-context-C45yRsx2.js",
     "name": "layout-segment-context",
     "src": "node_modules/vinext/dist/shims/layout-segment-context.js",
     "isDynamicEntry": true,
@@ -106,7 +106,7 @@
     ]
   },
   "virtual:vinext-app-browser-entry": {
-    "file": "fondue-tour-2026/_next/static/chunks/index-IskP4Uzh.js",
+    "file": "fondue-tour-2026/_next/static/chunks/index-DWPyb565.js",
     "name": "index",
     "src": "virtual:vinext-app-browser-entry",
     "isEntry": true,

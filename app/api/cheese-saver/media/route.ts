@@ -100,6 +100,14 @@ export async function POST(request: Request) {
     return apiResponse({ error: 'FILE_TOO_LARGE', message: `${accepted.kind === 'image' ? 'Images' : 'Videos'} must be ${limit} or smaller.` }, { status: 413 });
   }
 
+  const contentLengthHeader = request.headers.get('content-length');
+  if (contentLengthHeader !== null) {
+    const contentLength = wholeNumber(Number(contentLengthHeader), Number.MAX_SAFE_INTEGER);
+    if (contentLength === null || contentLength !== declaredSize) {
+      return apiResponse({ error: 'SIZE_MISMATCH', message: 'The selected file size did not match the upload.' }, { status: 400 });
+    }
+  }
+
   const rate = await rateLimitStatus(request, 'upload', MAXIMUM_UPLOADS_PER_HOUR, UPLOAD_WINDOW_SECONDS);
   if (rate.blocked) {
     return apiResponse({ error: 'UPLOAD_LIMIT', message: 'This device has reached the hourly upload limit.' }, { status: 429 });

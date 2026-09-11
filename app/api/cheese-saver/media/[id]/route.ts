@@ -48,7 +48,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
 
   const headers = new Headers({
     'accept-ranges': 'bytes',
-    'cache-control': 'private, max-age=300',
+    'cache-control': 'private, no-store',
     'content-type': media.contentType,
     'content-disposition': `inline; filename="${safeFilename(media.originalName)}"`,
     'x-content-type-options': 'nosniff',

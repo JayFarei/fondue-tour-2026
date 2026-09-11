@@ -3,24 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapPin } from 'lucide-react';
 import { assetPath } from '@/lib/asset-path';
+import type { MediaRecord } from '@/lib/cheese-saver/media';
 
-export type GalleryMedia = {
-  id: string;
-  originalName: string;
-  mediaKind: 'image' | 'video';
-  contentType: string;
-  byteSize: number;
-  width: number | null;
-  height: number | null;
-  durationSeconds: number | null;
-  capturedAt: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  locationSource: 'embedded' | 'device' | null;
-  caption: string | null;
-  credit: string | null;
-  uploadedAt: string;
-};
+export type GalleryMedia = MediaRecord;
 
 function escapeHtml(value: string) {
   return value.replace(/[&<>'"]/g, (character) => ({

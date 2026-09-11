@@ -91,6 +91,20 @@ function dimensionsFor(file: File, kind: 'image' | 'video') {
   });
 }
 
+async function embeddedVideoLocation(file: File) {
+  const sampleSize = 2 * 1024 * 1024;
+  const slices = [file.slice(0, Math.min(file.size, sampleSize))];
+  if (file.size > sampleSize) slices.push(file.slice(Math.max(0, file.size - sampleSize)));
+  const text = (await Promise.all(slices.map((slice) => slice.text()))).join('');
+  const match = /([+-]\d{2}(?:\.\d+)?)([+-]\d{3}(?:\.\d+)?)(?:[+-]\d+(?:\.\d+)?)?\//.exec(text);
+  if (!match) return null;
+  const latitude = Number(match[1]);
+  const longitude = Number(match[2]);
+  if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90) return null;
+  if (!Number.isFinite(longitude) || longitude < -180 || longitude > 180) return null;
+  return { latitude, longitude };
+}
+
 async function makeDraft(rawFile: File): Promise<Draft | null> {
   const file = normalizedFile(rawFile);
   if (!supportedTypes.has(file.type.toLowerCase())) return null;
@@ -113,6 +127,10 @@ async function makeDraft(rawFile: File): Promise<Draft | null> {
     } catch {
       // A missing or unsupported metadata block is normal and should not block the file.
     }
+  } else {
+    const location = await embeddedVideoLocation(file).catch(() => null);
+    latitude = location?.latitude ?? null;
+    longitude = location?.longitude ?? null;
   }
 
   const dimensions = await dimensionsFor(file, mediaKind);
@@ -381,7 +399,7 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
                     {draft.latitude !== null ? (
                       <label className="cheese-location-toggle">
                         <input type="checkbox" checked={draft.includeLocation} onChange={(event) => updateDraft(draft.id, { includeLocation: event.target.checked })} />
-                        <MapPinned className="size-3.5" /> {draft.locationSource === 'embedded' ? 'Photo location found' : 'Using current location'}
+                        <MapPinned className="size-3.5" /> {draft.locationSource === 'embedded' ? 'File location found' : 'Using current location'}
                       </label>
                     ) : (
                       <button type="button" className="cheese-location-action" onClick={() => applyDeviceLocation(draft.id)}><Navigation className="size-3.5" /> Use current location</button>

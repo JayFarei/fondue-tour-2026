@@ -12,6 +12,24 @@ export const mediaTypes = {
 
 export type AcceptedMediaType = keyof typeof mediaTypes;
 
+export type MediaRecord = {
+  id: string;
+  originalName: string;
+  mediaKind: 'image' | 'video';
+  contentType: string;
+  byteSize: number;
+  width: number | null;
+  height: number | null;
+  durationSeconds: number | null;
+  capturedAt: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  locationSource: 'embedded' | 'device' | null;
+  caption: string | null;
+  credit: string | null;
+  uploadedAt: string;
+};
+
 function startsWith(bytes: Uint8Array, expected: number[], offset = 0) {
   return expected.every((value, index) => bytes[offset + index] === value);
 }

@@ -1,5 +1,7 @@
 import { env } from 'cloudflare:workers';
 
+export type { MediaRecord } from '@/lib/cheese-saver/media';
+
 const COOKIE_NAME = 'cheese_saver_session';
 const SESSION_SECONDS = 7 * 24 * 60 * 60;
 const encoder = new TextEncoder();
@@ -9,24 +11,6 @@ export type CheeseSaverBindings = {
   MEDIA: R2Bucket;
   CHEESE_SAVER_PASSWORD_SHA256?: string;
   CHEESE_SAVER_SESSION_SECRET?: string;
-};
-
-export type MediaRecord = {
-  id: string;
-  originalName: string;
-  mediaKind: 'image' | 'video';
-  contentType: string;
-  byteSize: number;
-  width: number | null;
-  height: number | null;
-  durationSeconds: number | null;
-  capturedAt: string | null;
-  latitude: number | null;
-  longitude: number | null;
-  locationSource: 'embedded' | 'device' | null;
-  caption: string | null;
-  credit: string | null;
-  uploadedAt: string;
 };
 
 export function bindings() {

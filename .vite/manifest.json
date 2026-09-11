@@ -1,128 +1,176 @@
 {
-  "_Icon-U6bDhdkN.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/Icon-U6bDhdkN.js",
+  "_Icon-CcV4Ocgh.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/Icon-CcV4Ocgh.js",
     "name": "Icon",
     "imports": [
-      "_rolldown-runtime-CeJgAe7x.js",
-      "_framework-CcaMQPWE.js"
+      "_rolldown-runtime-Dd_uD5pT.js",
+      "_framework-BtyfZwou.js"
     ]
   },
-  "_framework-CcaMQPWE.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/framework-CcaMQPWE.js",
+  "_asset-path-CucNmy35.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/asset-path-CucNmy35.js",
+    "name": "asset-path",
+    "imports": [
+      "_createLucideIcon-Dkslr5eR.js"
+    ]
+  },
+  "_createLucideIcon-Dkslr5eR.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/createLucideIcon-Dkslr5eR.js",
+    "name": "createLucideIcon",
+    "imports": [
+      "_rolldown-runtime-Dd_uD5pT.js",
+      "_framework-BtyfZwou.js",
+      "_Icon-CcV4Ocgh.js"
+    ]
+  },
+  "_framework-BtyfZwou.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/framework-BtyfZwou.js",
     "name": "framework",
     "imports": [
-      "_rolldown-runtime-CeJgAe7x.js"
+      "_rolldown-runtime-Dd_uD5pT.js"
     ]
   },
-  "_rolldown-runtime-CeJgAe7x.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/rolldown-runtime-CeJgAe7x.js",
+  "_rolldown-runtime-Dd_uD5pT.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/rolldown-runtime-Dd_uD5pT.js",
     "name": "rolldown-runtime"
   },
+  "_vinext-CQmjOogi.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/vinext-CQmjOogi.js",
+    "name": "vinext",
+    "imports": [
+      "_rolldown-runtime-Dd_uD5pT.js",
+      "_framework-BtyfZwou.js"
+    ],
+    "dynamicImports": [
+      "_vinext-CQmjOogi.js"
+    ]
+  },
+  "_x-CFntKFMZ.js": {
+    "file": "fondue-tour-2026/_next/static/chunks/x-CFntKFMZ.js",
+    "name": "x",
+    "imports": [
+      "_createLucideIcon-Dkslr5eR.js"
+    ]
+  },
+  "components/cheese-saver.tsx": {
+    "file": "fondue-tour-2026/_next/static/chunks/cheese-saver-DmgdJ6Ac.js",
+    "name": "cheese-saver",
+    "src": "components/cheese-saver.tsx",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-Dd_uD5pT.js",
+      "_framework-BtyfZwou.js",
+      "_vinext-CQmjOogi.js",
+      "node_modules/vinext/dist/shims/image.js",
+      "_createLucideIcon-Dkslr5eR.js",
+      "_x-CFntKFMZ.js",
+      "_asset-path-CucNmy35.js"
+    ],
+    "dynamicImports": [
+      "node_modules/leaflet/dist/leaflet-src.js",
+      "node_modules/exifr/dist/full.esm.mjs"
+    ]
+  },
   "components/profile-weather.tsx": {
-    "file": "fondue-tour-2026/_next/static/chunks/profile-weather-qcVtXo1v.js",
+    "file": "fondue-tour-2026/_next/static/chunks/profile-weather-MvwNT1u1.js",
     "name": "profile-weather",
     "src": "components/profile-weather.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_rolldown-runtime-CeJgAe7x.js",
-      "components/stop-weather.tsx",
-      "_framework-CcaMQPWE.js"
+      "_rolldown-runtime-Dd_uD5pT.js",
+      "_framework-BtyfZwou.js",
+      "_createLucideIcon-Dkslr5eR.js",
+      "_x-CFntKFMZ.js",
+      "components/stop-weather.tsx"
     ]
   },
   "components/stop-weather.tsx": {
-    "file": "fondue-tour-2026/_next/static/chunks/stop-weather-glczuc2m.js",
+    "file": "fondue-tour-2026/_next/static/chunks/stop-weather-BPKx2VeM.js",
     "name": "stop-weather",
     "src": "components/stop-weather.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_rolldown-runtime-CeJgAe7x.js",
-      "_Icon-U6bDhdkN.js",
-      "_framework-CcaMQPWE.js"
+      "_rolldown-runtime-Dd_uD5pT.js",
+      "_framework-BtyfZwou.js",
+      "_createLucideIcon-Dkslr5eR.js"
     ]
   },
   "components/tour-map.tsx": {
-    "file": "fondue-tour-2026/_next/static/chunks/tour-map-DFmsgUfw.js",
+    "file": "fondue-tour-2026/_next/static/chunks/tour-map-DAtVoSS3.js",
     "name": "tour-map",
     "src": "components/tour-map.tsx",
     "isDynamicEntry": true,
     "imports": [
-      "_rolldown-runtime-CeJgAe7x.js",
-      "virtual:vinext-app-browser-entry",
-      "components/stop-weather.tsx",
-      "_framework-CcaMQPWE.js"
+      "_rolldown-runtime-Dd_uD5pT.js",
+      "_framework-BtyfZwou.js",
+      "_vinext-CQmjOogi.js",
+      "_createLucideIcon-Dkslr5eR.js",
+      "_asset-path-CucNmy35.js",
+      "components/stop-weather.tsx"
     ],
     "dynamicImports": [
       "node_modules/leaflet/dist/leaflet-src.js"
     ]
   },
+  "node_modules/exifr/dist/full.esm.mjs": {
+    "file": "fondue-tour-2026/_next/static/chunks/full.esm-C_v6nGbO.js",
+    "name": "full.esm",
+    "src": "node_modules/exifr/dist/full.esm.mjs",
+    "isDynamicEntry": true,
+    "imports": [
+      "_rolldown-runtime-Dd_uD5pT.js",
+      "_vinext-CQmjOogi.js"
+    ]
+  },
   "node_modules/leaflet/dist/leaflet-src.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/leaflet-src-CvwtY5ZO.js",
+    "file": "fondue-tour-2026/_next/static/chunks/leaflet-src-Cwj7MbZ4.js",
     "name": "leaflet-src",
     "src": "node_modules/leaflet/dist/leaflet-src.js",
     "isDynamicEntry": true,
     "imports": [
-      "_rolldown-runtime-CeJgAe7x.js"
+      "_rolldown-runtime-Dd_uD5pT.js"
     ]
   },
   "node_modules/vinext/dist/shims/image.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/image-Dn5siCfA.js",
+    "file": "fondue-tour-2026/_next/static/chunks/image-Xd14q4Gb.js",
     "name": "image",
     "src": "node_modules/vinext/dist/shims/image.js",
     "isDynamicEntry": true,
     "imports": [
-      "_rolldown-runtime-CeJgAe7x.js",
-      "virtual:vinext-app-browser-entry",
-      "_framework-CcaMQPWE.js"
-    ]
-  },
-  "node_modules/vinext/dist/shims/internal/app-route-prefetch-policy.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/app-route-prefetch-policy-D_Gfl0-r.js",
-    "name": "app-route-prefetch-policy",
-    "src": "node_modules/vinext/dist/shims/internal/app-route-prefetch-policy.js",
-    "isDynamicEntry": true,
-    "imports": [
-      "virtual:vinext-app-browser-entry"
+      "_rolldown-runtime-Dd_uD5pT.js",
+      "_framework-BtyfZwou.js",
+      "_vinext-CQmjOogi.js"
     ]
   },
   "node_modules/vinext/dist/shims/layout-segment-context.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/layout-segment-context-CWM3g6l4.js",
+    "file": "fondue-tour-2026/_next/static/chunks/layout-segment-context-B-1EbyXK.js",
     "name": "layout-segment-context",
     "src": "node_modules/vinext/dist/shims/layout-segment-context.js",
     "isDynamicEntry": true,
     "imports": [
-      "_rolldown-runtime-CeJgAe7x.js",
-      "virtual:vinext-app-browser-entry",
-      "_framework-CcaMQPWE.js"
-    ]
-  },
-  "node_modules/vinext/dist/shims/streamed-icons.js": {
-    "file": "fondue-tour-2026/_next/static/chunks/streamed-icons-DSvdcqmy.js",
-    "name": "streamed-icons",
-    "src": "node_modules/vinext/dist/shims/streamed-icons.js",
-    "isDynamicEntry": true,
-    "imports": [
-      "_rolldown-runtime-CeJgAe7x.js",
-      "_framework-CcaMQPWE.js"
+      "_rolldown-runtime-Dd_uD5pT.js",
+      "_framework-BtyfZwou.js",
+      "_vinext-CQmjOogi.js"
     ]
   },
   "virtual:vinext-app-browser-entry": {
-    "file": "fondue-tour-2026/_next/static/chunks/index-rf5QjYht.js",
+    "file": "fondue-tour-2026/_next/static/chunks/index-DqYkND1k.js",
     "name": "index",
     "src": "virtual:vinext-app-browser-entry",
     "isEntry": true,
     "imports": [
-      "_rolldown-runtime-CeJgAe7x.js",
-      "_framework-CcaMQPWE.js"
+      "_rolldown-runtime-Dd_uD5pT.js",
+      "_framework-BtyfZwou.js",
+      "_vinext-CQmjOogi.js"
     ],
     "dynamicImports": [
-      "node_modules/vinext/dist/shims/internal/app-route-prefetch-policy.js",
       "components/tour-map.tsx",
-      "virtual:vinext-app-browser-entry",
+      "_vinext-CQmjOogi.js",
       "node_modules/vinext/dist/shims/layout-segment-context.js",
       "components/stop-weather.tsx",
-      "_Icon-U6bDhdkN.js",
-      "node_modules/vinext/dist/shims/streamed-icons.js",
+      "_Icon-CcV4Ocgh.js",
       "node_modules/vinext/dist/shims/image.js",
+      "components/cheese-saver.tsx",
       "components/profile-weather.tsx"
     ]
   }

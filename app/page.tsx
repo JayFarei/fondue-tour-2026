@@ -7,6 +7,7 @@ import {
   Bath,
   BedDouble,
   CableCar,
+  Camera,
   CarFront,
   Check,
   Clock3,
@@ -14,6 +15,7 @@ import {
   Fuel,
   Map,
   MapPinned,
+  Images,
   Mountain,
   Plane,
   Route,
@@ -21,7 +23,7 @@ import {
   Sparkles,
   Utensils,
 } from 'lucide-react';
-import { assetPath } from '@/lib/asset-path';
+import { assetPath, cheeseSaverUrl } from '@/lib/asset-path';
 import { StageProfile, highestSummit, summitCount } from '@/components/stage-profile';
 import { FullTourOverview, TourMap } from '@/components/tour-map';
 import routePlans from '@/data/tour-routes.json';
@@ -391,6 +393,7 @@ export default function Home() {
             <span className="brand-word"><span className="brand-long">Fondue Tour ’26</span><span className="brand-short">Fondue ’26</span></span>
           </a>
           <nav aria-label="Tour navigation" className="flex items-center gap-1 text-sm text-white/70">
+            <a className="header-link header-cheese-link" href={cheeseSaverUrl}><Camera className="size-4" /><span className="header-cheese-label">Cheese Saver</span></a>
             <a className="header-link" href="#overview"><span className="nav-long">Full route</span><span className="nav-short">Route</span></a>
             <a className="header-link" href="#roadbook"><span className="nav-long">Roadbook</span><span className="nav-short">Days</span></a>
             <a className="header-link header-link-wide" href="#passes">Passes</a>
@@ -421,6 +424,11 @@ export default function Home() {
             <span className="hero-title-line hero-title-accent">One Alpine line.</span>
           </h1>
           <p className="hero-lede">Your pocket roadbook for every pass, rendezvous, fuel stop and hotel, with restart navigation, open maps and TomTom tracks.</p>
+
+          <div className="hero-cheese-actions" aria-label="Cheese Saver">
+            <a href={`${cheeseSaverUrl}?view=upload`}><Camera className="size-4" /> Upload memories</a>
+            <a href={`${cheeseSaverUrl}?view=gallery`}><Images className="size-4" /> View gallery</a>
+          </div>
 
           <ul className="hero-board" aria-label="Tour at a glance">
             <li><span className="hero-board-value">1,418<small>km</small></span><span className="hero-board-label">Zürich to Lugano</span></li>

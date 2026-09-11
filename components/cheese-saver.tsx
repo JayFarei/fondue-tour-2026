@@ -18,10 +18,11 @@ import {
   Navigation,
   ShieldCheck,
   Share2,
+  Trash2,
   Upload,
   X,
 } from 'lucide-react';
-import { Button, buttonVariants } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -32,6 +33,7 @@ type View = 'gallery' | 'map' | 'upload';
 type ShareState = 'idle' | 'preparing' | 'ready' | 'sharing';
 type Draft = {
   id: string;
+  uploadId: string;
   file: File;
   previewUrl: string;
   mediaKind: 'image' | 'video';
@@ -45,6 +47,7 @@ type Draft = {
   durationSeconds: number | null;
   caption: string;
   state: 'ready' | 'uploading' | 'done' | 'error';
+  uploadProgress: number;
   error: string | null;
 };
 
@@ -95,6 +98,20 @@ function dimensionsFor(file: File, kind: 'image' | 'video') {
   });
 }
 
+async function stableUploadId(file: File) {
+  const sampleSize = 1024 * 1024;
+  const fingerprint = new Blob([
+    JSON.stringify({ name: file.name, size: file.size, type: file.type }),
+    file.slice(0, Math.min(file.size, sampleSize)),
+    file.size > sampleSize ? file.slice(Math.max(0, file.size - sampleSize)) : new Blob(),
+  ]);
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', await fingerprint.arrayBuffer()));
+  digest[6] = (digest[6] & 0x0f) | 0x50;
+  digest[8] = (digest[8] & 0x3f) | 0x80;
+  const hex = Array.from(digest.slice(0, 16), (byte) => byte.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+}
+
 async function embeddedVideoLocation(file: File) {
   const sampleSize = 2 * 1024 * 1024;
   const slices = [file.slice(0, Math.min(file.size, sampleSize))];
@@ -138,9 +155,11 @@ async function makeDraft(rawFile: File): Promise<Draft | null> {
   }
 
   const dimensions = await dimensionsFor(file, mediaKind);
+  const uploadId = await stableUploadId(file);
   const hasLocation = latitude !== null && longitude !== null;
   return {
     id: crypto.randomUUID(),
+    uploadId,
     file,
     previewUrl: URL.createObjectURL(file),
     mediaKind,
@@ -152,8 +171,56 @@ async function makeDraft(rawFile: File): Promise<Draft | null> {
     ...dimensions,
     caption: '',
     state: 'ready',
+    uploadProgress: 0,
     error: null,
   };
+}
+
+function uploadMediaFile(
+  draft: Draft,
+  metadata: Record<string, unknown>,
+  onProgress: (percent: number) => void,
+  registerRequest: (request: XMLHttpRequest | null) => void,
+) {
+  return new Promise<void>((resolve, reject) => {
+    const request = new XMLHttpRequest();
+    request.open('POST', '/api/cheese-saver/media');
+    request.timeout = 30 * 60 * 1_000;
+    request.setRequestHeader('content-type', draft.file.type);
+    request.setRequestHeader('x-cheese-metadata', encodeURIComponent(JSON.stringify(metadata)));
+    registerRequest(request);
+    request.upload.addEventListener('progress', (event) => {
+      if (event.lengthComputable) onProgress(Math.min(99, Math.round((event.loaded / event.total) * 100)));
+    });
+    request.addEventListener('load', () => {
+      registerRequest(null);
+      let result: { message?: string } = {};
+      try {
+        result = JSON.parse(request.responseText) as { message?: string };
+      } catch {
+        // A response without JSON falls back to the status-based message below.
+      }
+      if (request.status >= 200 && request.status < 300) {
+        onProgress(100);
+        resolve();
+      } else {
+        reject(new Error(result.message || (request.status === 401 ? 'Cheese Saver locked. Unlock it and try again.' : 'Upload failed.')));
+      }
+    });
+    request.addEventListener('error', () => {
+      registerRequest(null);
+      reject(new Error('The upload connection was interrupted. Try again.'));
+    });
+    request.addEventListener('abort', () => {
+      registerRequest(null);
+      reject(new Error('The upload was stopped.'));
+    });
+    request.addEventListener('timeout', () => {
+      registerRequest(null);
+      reject(new Error('The upload timed out. Try again on a stronger connection.'));
+    });
+    request.send(draft.file);
+  });
 }
 
 function formatBytes(bytes: number) {
@@ -163,11 +230,46 @@ function formatBytes(bytes: number) {
 
 function formatDate(value: string | null) {
   if (!value) return 'Date unknown';
-  return new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+  return new Intl.DateTimeFormat('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Europe/Zurich' }).format(new Date(value));
 }
 
 function mediaUrl(id: string) {
   return `/api/cheese-saver/media/${id}`;
+}
+
+const tourGalleryDays = [
+  { key: '2026-09-08', label: 'Warm-up', dateLabel: 'Tue 8 Sep' },
+  { key: '2026-09-09', label: 'Day 1', dateLabel: 'Wed 9 Sep' },
+  { key: '2026-09-10', label: 'Day 2', dateLabel: 'Thu 10 Sep' },
+  { key: '2026-09-11', label: 'Day 3', dateLabel: 'Fri 11 Sep' },
+  { key: '2026-09-12', label: 'Day 4', dateLabel: 'Sat 12 Sep' },
+  { key: '2026-09-13', label: 'Day 5', dateLabel: 'Sun 13 Sep' },
+] as const;
+
+const tourDateKeys = new Set<string>(tourGalleryDays.map((day) => day.key));
+const galleryDateFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/Zurich',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+const galleryShortDateFormatter = new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'Europe/Zurich',
+  weekday: 'short',
+  day: 'numeric',
+  month: 'short',
+});
+
+function galleryDateKey(item: GalleryMedia) {
+  const date = new Date(item.capturedAt || item.uploadedAt);
+  if (Number.isNaN(date.valueOf())) return 'other';
+  const parts = Object.fromEntries(galleryDateFormatter.formatToParts(date).map((part) => [part.type, part.value]));
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function galleryTimestamp(item: GalleryMedia) {
+  const timestamp = new Date(item.capturedAt || item.uploadedAt).valueOf();
+  return Number.isNaN(timestamp) ? Number.MAX_SAFE_INTEGER : timestamp;
 }
 
 function UnlockPanel({ onUnlocked }: { onUnlocked: () => void }) {
@@ -228,29 +330,98 @@ function UnlockPanel({ onUnlocked }: { onUnlocked: () => void }) {
 }
 
 function GalleryPanel({ media, loading, onSelect }: { media: GalleryMedia[]; loading: boolean; onSelect: (item: GalleryMedia) => void }) {
+  const [filter, setFilter] = useState('all');
+  const sortedMedia = useMemo(() => [...media].sort((left, right) => galleryTimestamp(left) - galleryTimestamp(right)), [media]);
+  const counts = useMemo(() => {
+    const result = new Map<string, number>();
+    for (const item of sortedMedia) {
+      const key = galleryDateKey(item);
+      const group = tourDateKeys.has(key) ? key : 'other';
+      result.set(group, (result.get(group) ?? 0) + 1);
+    }
+    return result;
+  }, [sortedMedia]);
+
   if (loading) return <div className="cheese-empty"><LoaderCircle className="mx-auto size-7 animate-spin" /><p>Loading the cheese vault…</p></div>;
   if (!media.length) return <div className="cheese-empty"><Images className="mx-auto size-8" /><p className="font-semibold">No memories saved yet</p><p className="text-muted-foreground">Upload the first photo or video from the tour.</p></div>;
 
+  const tourGroups = tourGalleryDays.map((day) => ({ ...day, items: sortedMedia.filter((item) => galleryDateKey(item) === day.key) }));
+  const otherItems = sortedMedia.filter((item) => !tourDateKeys.has(galleryDateKey(item)));
+  const otherItemsByDate = new Map<string, GalleryMedia[]>();
+  for (const item of otherItems) {
+    const key = galleryDateKey(item);
+    otherItemsByDate.set(key, [...(otherItemsByDate.get(key) ?? []), item]);
+  }
+  const chronologicalGroups = [
+    ...tourGroups,
+    ...Array.from(otherItemsByDate, ([dateKey, items]) => ({
+      key: `other-${dateKey}`,
+      label: 'Other date',
+      dateLabel: dateKey === 'other' ? 'Date unknown' : galleryShortDateFormatter.format(new Date(items[0].capturedAt || items[0].uploadedAt)),
+      items,
+    })),
+  ].filter((group) => group.items.length).sort((left, right) => galleryTimestamp(left.items[0]) - galleryTimestamp(right.items[0]));
+  const visibleGroups = filter === 'all'
+    ? chronologicalGroups
+    : filter === 'other'
+      ? [{ key: 'other', label: 'Other dates', dateLabel: 'Outside the tour', items: otherItems }]
+      : tourGroups.filter((group) => group.key === filter);
+  const visibleCount = visibleGroups.reduce((total, group) => total + group.items.length, 0);
+
   return (
-    <div className="cheese-gallery">
-      {media.map((item) => (
-        <button key={item.id} type="button" className="cheese-media-card" onClick={() => onSelect(item)}>
-          <div className="cheese-media-frame">
-            {item.mediaKind === 'image' ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={mediaUrl(item.id)} alt={item.caption || item.originalName} loading="lazy" />
-            ) : (
-              <video src={mediaUrl(item.id)} muted playsInline preload="metadata" aria-label={item.caption || item.originalName} />
-            )}
-            <span className="cheese-kind-badge">{item.mediaKind === 'video' ? <Film /> : <Camera />}{item.mediaKind}</span>
-            {item.latitude !== null ? <span className="cheese-location-badge"><MapPinned />Mapped</span> : null}
-          </div>
-          <span className="cheese-media-copy">
-            <strong>{item.caption || item.originalName}</strong>
-            <small>{formatDate(item.capturedAt || item.uploadedAt)}{item.credit ? ` · ${item.credit}` : ''}</small>
-          </span>
-        </button>
-      ))}
+    <div>
+      <div className="cheese-gallery-toolbar">
+        <div className="cheese-day-filters" aria-label="Filter memories by tour day">
+          <button type="button" className={filter === 'all' ? 'is-active' : ''} aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
+            <strong>All</strong><span>{media.length}</span>
+          </button>
+          {tourGalleryDays.map((day) => (
+            <button key={day.key} type="button" className={filter === day.key ? 'is-active' : ''} aria-pressed={filter === day.key} onClick={() => setFilter(day.key)}>
+              <strong>{day.label}</strong><small>{day.dateLabel}</small><span>{counts.get(day.key) ?? 0}</span>
+            </button>
+          ))}
+          <button type="button" className={filter === 'other' ? 'is-active' : ''} aria-pressed={filter === 'other'} onClick={() => setFilter('other')}>
+            <strong>Other</strong><span>{counts.get('other') ?? 0}</span>
+          </button>
+        </div>
+        <p aria-live="polite">{visibleCount} {visibleCount === 1 ? 'memory' : 'memories'} · oldest first</p>
+      </div>
+
+      <div className="cheese-gallery-groups">
+        {visibleGroups.map((group) => {
+          const headingId = `cheese-gallery-${group.key}`;
+          return (
+          <section key={group.key} className="cheese-gallery-group" aria-labelledby={headingId}>
+            <header>
+              <div><h2 id={headingId}>{group.label}</h2><span>{group.dateLabel}</span></div>
+              <small>{group.items.length} {group.items.length === 1 ? 'memory' : 'memories'}</small>
+            </header>
+            {group.items.length ? (
+              <div className="cheese-gallery">
+                {group.items.map((item) => (
+                  <button key={item.id} type="button" className="cheese-media-card" onClick={() => onSelect(item)} aria-label={`Open ${item.caption || item.originalName}, ${formatDate(item.capturedAt || item.uploadedAt)}`}>
+                    <div className="cheese-media-frame">
+                      {item.mediaKind === 'image' ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={mediaUrl(item.id)} alt={item.caption || item.originalName} loading="lazy" />
+                      ) : (
+                        <video src={mediaUrl(item.id)} muted playsInline preload="metadata" aria-label={item.caption || item.originalName} />
+                      )}
+                      {item.mediaKind === 'video' ? <span className="cheese-kind-badge"><Film />Video</span> : null}
+                      {item.latitude !== null ? <span className="cheese-location-badge"><MapPinned /><span className="sr-only">Mapped</span></span> : null}
+                      <span className="cheese-media-copy">
+                        <strong>{item.caption || item.originalName}</strong>
+                        <small>{formatDate(item.capturedAt || item.uploadedAt)}{item.credit ? ` · ${item.credit}` : ''}</small>
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : <div className="cheese-day-empty"><Camera /><span>No memories from this day yet.</span></div>}
+          </section>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -262,20 +433,46 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
   const [credit, setCredit] = useState('');
   const [preparing, setPreparing] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadBatch, setUploadBatch] = useState<{ current: number; total: number; name: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const activeUpload = useRef<XMLHttpRequest | null>(null);
+  const cancelRequested = useRef(false);
 
   useEffect(() => {
     draftsRef.current = drafts;
   }, [drafts]);
-  useEffect(() => () => draftsRef.current.forEach((draft) => URL.revokeObjectURL(draft.previewUrl)), []);
+  useEffect(() => () => {
+    cancelRequested.current = true;
+    activeUpload.current?.abort();
+    activeUpload.current = null;
+    draftsRef.current.forEach((draft) => URL.revokeObjectURL(draft.previewUrl));
+  }, []);
 
   async function addFiles(files: FileList | null) {
     if (!files?.length) return;
     setPreparing(true);
     setNotice(null);
     const prepared = (await Promise.all(Array.from(files).map(makeDraft))).filter((draft): draft is Draft => Boolean(draft));
-    setDrafts((current) => [...current, ...prepared].slice(0, 20));
-    if (prepared.length !== files.length) setNotice('Some files were skipped because their format is not supported.');
+    const uploadIds = new Set(drafts.map((draft) => draft.uploadId));
+    const unique = prepared.filter((draft) => {
+      if (uploadIds.has(draft.uploadId)) {
+        URL.revokeObjectURL(draft.previewUrl);
+        return false;
+      }
+      uploadIds.add(draft.uploadId);
+      return true;
+    });
+    const retained = unique.slice(0, Math.max(0, 20 - drafts.length));
+    for (const skipped of unique.slice(retained.length)) URL.revokeObjectURL(skipped.previewUrl);
+    setDrafts((current) => [...current, ...retained].slice(0, 20));
+    if (retained.length) {
+      setNotice(`${retained.length} ${retained.length === 1 ? 'item is' : 'items are'} selected and ready to upload.`);
+    }
+    if (retained.length !== files.length) {
+      setNotice(retained.length
+        ? `${retained.length} selected. Some files were skipped because they were unsupported, already selected, or exceeded the 20-item limit.`
+        : 'No more files were added. They were unsupported, already selected, or the 20-item limit is full.');
+    }
     setPreparing(false);
     if (input.current) input.current.value = '';
   }
@@ -315,11 +512,16 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
     if (!ready.length) return;
     setUploading(true);
     setNotice(null);
+    cancelRequested.current = false;
     let completed = 0;
+    let failed = 0;
 
-    for (const draft of ready) {
-      updateDraft(draft.id, { state: 'uploading', error: null });
+    for (const [index, draft] of ready.entries()) {
+      if (cancelRequested.current) break;
+      setUploadBatch({ current: index + 1, total: ready.length, name: draft.file.name });
+      updateDraft(draft.id, { state: 'uploading', uploadProgress: 0, error: null });
       const metadata = {
+        uploadId: draft.uploadId,
         name: draft.file.name,
         size: draft.file.size,
         width: draft.width,
@@ -334,29 +536,45 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
         website: '',
       };
       try {
-        const response = await fetch('/api/cheese-saver/media', {
-          method: 'POST',
-          headers: {
-            'content-type': draft.file.type,
-            'x-cheese-metadata': encodeURIComponent(JSON.stringify(metadata)),
-          },
-          body: draft.file,
-        });
-        const result = await response.json() as { message?: string };
-        if (!response.ok) throw new Error(result.message || 'Upload failed.');
-        updateDraft(draft.id, { state: 'done' });
+        await uploadMediaFile(
+          draft,
+          metadata,
+          (uploadProgress) => updateDraft(draft.id, { uploadProgress }),
+          (request) => { activeUpload.current = request; },
+        );
+        updateDraft(draft.id, { state: 'done', uploadProgress: 100 });
         completed += 1;
       } catch (error) {
-        updateDraft(draft.id, { state: 'error', error: error instanceof Error ? error.message : 'Upload failed.' });
+        if (cancelRequested.current) {
+          updateDraft(draft.id, { state: 'ready', uploadProgress: 0, error: null });
+          break;
+        }
+        failed += 1;
+        updateDraft(draft.id, { state: 'error', uploadProgress: 0, error: error instanceof Error ? error.message : 'Upload failed.' });
       }
     }
 
+    const wasCancelled = cancelRequested.current;
+    activeUpload.current = null;
     setUploading(false);
+    setUploadBatch(null);
     if (completed) {
       await onUploaded();
-      setNotice(`${completed} ${completed === 1 ? 'memory' : 'memories'} saved.`);
     }
+    setNotice(wasCancelled
+      ? `Upload stopped. ${completed ? `${completed} ${completed === 1 ? 'item was' : 'items were'} saved; ` : ''}the remaining items are ready to resume.`
+      : failed
+        ? `${completed} saved; ${failed} ${failed === 1 ? 'item needs' : 'items need'} another try.`
+        : `Upload complete — ${completed} ${completed === 1 ? 'memory is' : 'memories are'} now in the gallery.`);
   }
+
+  function cancelUpload() {
+    cancelRequested.current = true;
+    activeUpload.current?.abort();
+  }
+
+  const pendingCount = drafts.filter((draft) => draft.state === 'ready' || draft.state === 'error').length;
+  const savedCount = drafts.filter((draft) => draft.state === 'done').length;
 
   return (
     <div className="cheese-upload-layout">
@@ -380,6 +598,16 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
 
       {drafts.length ? (
         <div className="space-y-4">
+          <div className={`cheese-upload-signal ${uploading ? 'is-uploading' : 'is-ready'}`}>
+            <output className="cheese-upload-signal-copy" aria-live="polite">
+              {uploading ? <LoaderCircle className="size-5 shrink-0 animate-spin" /> : <Check className="size-5 shrink-0" />}
+              <span className="min-w-0">
+                <strong>{uploading && uploadBatch ? `Uploading ${uploadBatch.current} of ${uploadBatch.total}` : pendingCount ? `${pendingCount} ready to upload` : `${savedCount} saved to the gallery`}</strong>
+                <span>{uploading && uploadBatch ? uploadBatch.name : pendingCount ? 'Review the previews below, then tap the upload button.' : 'Upload complete. You can remove these confirmations when you are ready.'}</span>
+              </span>
+            </output>
+            {uploading ? <button type="button" className="cheese-upload-stop" onClick={cancelUpload}><X />Stop</button> : null}
+          </div>
           <label className="block" htmlFor="cheese-credit">
             <span className="mb-2 block text-sm font-semibold">Your name <span className="font-normal text-muted-foreground">(optional)</span></span>
             <Input id="cheese-credit" value={credit} onChange={(event) => setCredit(event.target.value.slice(0, 80))} placeholder="Who took these?" className="h-11 bg-white" />
@@ -396,7 +624,15 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0"><p className="truncate font-semibold">{draft.file.name}</p><p className="mt-0.5 text-xs text-muted-foreground">{formatBytes(draft.file.size)} · {formatDate(draft.capturedAt)}</p></div>
-                    <Button type="button" variant="ghost" size="icon-sm" onClick={() => removeDraft(draft.id)} disabled={uploading} aria-label={`Remove ${draft.file.name}`}><X /></Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => removeDraft(draft.id)}
+                      disabled={uploading}
+                      aria-label={draft.state === 'done' ? `Dismiss saved confirmation for ${draft.file.name}` : `Remove ${draft.file.name} from upload`}
+                      title={draft.state === 'done' ? 'Dismiss confirmation' : 'Remove from upload'}
+                    ><X /></Button>
                   </div>
                   <Input value={draft.caption} onChange={(event) => updateDraft(draft.id, { caption: event.target.value.slice(0, 280) })} placeholder="Caption (optional)" className="mt-3 h-10 bg-white" />
                   <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
@@ -408,16 +644,22 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
                     ) : (
                       <button type="button" className="cheese-location-action" onClick={() => applyDeviceLocation(draft.id)}><Navigation className="size-3.5" /> Use current location</button>
                     )}
-                    {draft.state === 'uploading' ? <span className="flex items-center gap-1.5 text-[#396b67]"><LoaderCircle className="size-3.5 animate-spin" />Saving</span> : null}
-                    {draft.state === 'done' ? <span className="flex items-center gap-1.5 text-[#396b67]"><Check className="size-3.5" />Saved</span> : null}
+                    {draft.state === 'ready' ? <span className="cheese-upload-state is-ready"><Check />Selected</span> : null}
+                    {draft.state === 'uploading' ? <span className="cheese-upload-state is-uploading"><LoaderCircle className="animate-spin" />Uploading {draft.uploadProgress}%</span> : null}
+                    {draft.state === 'done' ? <span className="cheese-upload-state is-done"><Check />Saved to gallery</span> : null}
+                    {draft.state === 'error' ? <span className="cheese-upload-state is-error"><CircleAlert />Needs retry</span> : null}
                   </div>
+                  {draft.state === 'uploading' ? (
+                    <progress className="cheese-upload-progress" aria-label={`Uploading ${draft.file.name}`} max={100} value={draft.uploadProgress}>{draft.uploadProgress}%</progress>
+                  ) : null}
                   {draft.error ? <p className="cheese-error mt-3"><CircleAlert className="size-4 shrink-0" />{draft.error}</p> : null}
                 </div>
               </article>
             ))}
           </div>
-          <Button type="button" onClick={() => void uploadAll()} disabled={uploading || !drafts.some((draft) => draft.state !== 'done')} className="h-12 w-full rounded-xl bg-[#173230] text-base hover:bg-[#244b48]">
-            {uploading ? <LoaderCircle className="animate-spin" /> : <Upload />} Save to Cheese Saver
+          <Button type="button" onClick={() => void uploadAll()} disabled={uploading || !pendingCount} className="h-12 w-full rounded-xl bg-[#173230] text-base hover:bg-[#244b48]">
+            {uploading ? <LoaderCircle className="animate-spin" /> : pendingCount ? <Upload /> : <Check />}
+            {uploading && uploadBatch ? `Uploading ${uploadBatch.current} of ${uploadBatch.total}` : pendingCount ? `Upload ${pendingCount} ${pendingCount === 1 ? 'item' : 'items'}` : 'All selected items saved'}
           </Button>
         </div>
       ) : null}
@@ -437,17 +679,29 @@ export function CheeseSaver() {
   const [media, setMedia] = useState<GalleryMedia[]>([]);
   const [loadingMedia, setLoadingMedia] = useState(false);
   const [galleryError, setGalleryError] = useState<string | null>(null);
+  const [galleryNotice, setGalleryNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<GalleryMedia | null>(null);
+  const [deleteConfirming, setDeleteConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [shareState, setShareState] = useState<ShareState>('idle');
   const [shareProgress, setShareProgress] = useState(0);
+  const [preparingZip, setPreparingZip] = useState(false);
   const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
   const [downloadError, setDownloadError] = useState<string | null>(null);
   const preparedShareFiles = useRef<File[]>([]);
+  const shareAbortController = useRef<AbortController | null>(null);
+  const zipAbortController = useRef<AbortController | null>(null);
 
   const resetDownloadPreparation = useCallback(() => {
+    zipAbortController.current?.abort();
+    zipAbortController.current = null;
+    shareAbortController.current?.abort();
+    shareAbortController.current = null;
     preparedShareFiles.current = [];
     setShareState('idle');
     setShareProgress(0);
+    setPreparingZip(false);
     setDownloadNotice(null);
     setDownloadError(null);
   }, []);
@@ -491,9 +745,89 @@ export function CheeseSaver() {
   }, [loadMedia]);
 
   const mappedCount = useMemo(() => media.filter((item) => item.latitude !== null).length, [media]);
-  const selectMedia = useCallback((item: GalleryMedia) => setSelected(item), []);
+  const selectMedia = useCallback((item: GalleryMedia) => {
+    setSelected(item);
+    setDeleteConfirming(false);
+    setDeleteError(null);
+  }, []);
+
+  async function deleteSelected() {
+    if (!selected) return;
+    if (!deleteConfirming) {
+      setDeleteConfirming(true);
+      setDeleteError(null);
+      return;
+    }
+
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const response = await fetch(mediaUrl(selected.id), { method: 'DELETE' });
+      if (response.status === 401) {
+        setUnlocked(false);
+        setSelected(null);
+        return;
+      }
+      if (!response.ok) {
+        const result = await response.json().catch(() => ({})) as { message?: string };
+        throw new Error(result.message || 'This memory could not be deleted.');
+      }
+      const deletedName = selected.caption || selected.originalName;
+      setMedia((current) => current.filter((item) => item.id !== selected.id));
+      setSelected(null);
+      setDeleteConfirming(false);
+      setGalleryNotice(`${deletedName} was deleted from Cheese Saver.`);
+      resetDownloadPreparation();
+    } catch (error) {
+      setDeleteError(error instanceof Error ? error.message : 'This memory could not be deleted.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  async function downloadZip() {
+    zipAbortController.current?.abort();
+    const controller = new AbortController();
+    zipAbortController.current = controller;
+    setPreparingZip(true);
+    setDownloadError(null);
+    setDownloadNotice(null);
+    try {
+      const response = await fetch('/api/cheese-saver/download', {
+        method: 'HEAD',
+        cache: 'no-store',
+        signal: controller.signal,
+      });
+      if (response.status === 401) {
+        setUnlocked(false);
+        resetDownloadPreparation();
+        return;
+      }
+      if (!response.ok) {
+        const message = response.status === 413
+          ? 'The full gallery is too large for one ZIP file.'
+          : response.status === 429
+            ? 'Too many full-gallery downloads. Try again later.'
+            : 'The ZIP file could not be prepared.';
+        throw new Error(message);
+      }
+      if (controller.signal.aborted) return;
+      setDownloadNotice('Your ZIP download is starting.');
+      window.location.assign('/api/cheese-saver/download');
+    } catch (error) {
+      if (controller.signal.aborted) return;
+      setDownloadError(error instanceof Error ? error.message : 'The ZIP file could not be prepared.');
+    } finally {
+      if (zipAbortController.current === controller) {
+        zipAbortController.current = null;
+        setPreparingZip(false);
+      }
+    }
+  }
 
   async function preparePhotoLibraryShare() {
+    shareAbortController.current?.abort();
+    shareAbortController.current = null;
     setDownloadError(null);
     setDownloadNotice(null);
     if (!navigator.share || !navigator.canShare) {
@@ -506,18 +840,22 @@ export function CheeseSaver() {
       return;
     }
 
+    const controller = new AbortController();
+    shareAbortController.current = controller;
     setShareState('preparing');
     setShareProgress(0);
     const files: File[] = [];
     try {
       for (const [index, item] of media.entries()) {
-        const response = await fetch(mediaUrl(item.id), { cache: 'no-store' });
+        const response = await fetch(mediaUrl(item.id), { cache: 'no-store', signal: controller.signal });
         if (response.status === 401) {
           setUnlocked(false);
-          throw new Error('Cheese Saver locked. Unlock it and try again.');
+          controller.abort();
+          return;
         }
         if (!response.ok) throw new Error(`Could not prepare ${item.originalName}.`);
         const blob = await response.blob();
+        if (controller.signal.aborted) return;
         const modifiedAt = new Date(item.capturedAt || item.uploadedAt).valueOf();
         files.push(new File([blob], item.originalName.replace(/[\\/]/g, '_'), {
           type: item.contentType,
@@ -525,14 +863,18 @@ export function CheeseSaver() {
         }));
         setShareProgress(index + 1);
       }
+      if (controller.signal.aborted) return;
       if (!navigator.canShare({ files })) throw new Error('This browser cannot share this combination of photos and videos. Download the ZIP instead.');
       preparedShareFiles.current = files;
       setShareState('ready');
       setDownloadNotice(`${files.length} ${files.length === 1 ? 'item is' : 'items are'} ready. Tap “Open share sheet”, then choose “Save to Photos”.`);
     } catch (error) {
+      if (controller.signal.aborted) return;
       preparedShareFiles.current = [];
       setShareState('idle');
       setDownloadError(error instanceof Error ? error.message : 'The gallery could not be prepared for Photos.');
+    } finally {
+      if (shareAbortController.current === controller) shareAbortController.current = null;
     }
   }
 
@@ -566,6 +908,9 @@ export function CheeseSaver() {
     await fetch('/api/cheese-saver/logout', { method: 'POST' });
     setUnlocked(false);
     setMedia([]);
+    setSelected(null);
+    setDeleteConfirming(false);
+    setDeleteError(null);
     resetDownloadPreparation();
   }
 
@@ -594,9 +939,17 @@ export function CheeseSaver() {
             <div className="space-y-3 sm:text-right">
               <div className="flex items-center gap-2 text-xs text-muted-foreground sm:justify-end"><ShieldCheck className="size-4 text-[#396b67]" /> Password session expires after seven days</div>
               <div className="cheese-download-actions">
-                <a href="/api/cheese-saver/download" download className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 rounded-xl bg-white' })} aria-disabled={!media.length} tabIndex={media.length ? undefined : -1} onClick={(event) => { if (!media.length) event.preventDefault(); }}>
-                  <Archive /> Download ZIP
-                </a>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  disabled={!media.length || preparingZip}
+                  className="h-11 rounded-xl bg-white"
+                  onClick={() => void downloadZip()}
+                >
+                  {preparingZip ? <LoaderCircle className="animate-spin" /> : <Archive />}
+                  {preparingZip ? 'Preparing ZIP' : 'Download ZIP'}
+                </Button>
                 <Button
                   type="button"
                   variant="outline"
@@ -614,6 +967,7 @@ export function CheeseSaver() {
 
           {downloadError ? <p className="cheese-error mb-4" role="alert"><CircleAlert className="size-4 shrink-0" />{downloadError}</p> : null}
           {downloadNotice ? <output className="cheese-notice mb-4 block">{downloadNotice}</output> : null}
+          {galleryNotice ? <output className="cheese-notice mb-4 block" aria-live="polite">{galleryNotice}</output> : null}
 
           <Tabs value={view} onValueChange={changeView}>
             <TabsList className="cheese-tabs" aria-label="Cheese Saver views">
@@ -631,7 +985,7 @@ export function CheeseSaver() {
         </section>
       ) : null}
 
-      <Dialog open={Boolean(selected)} onOpenChange={(open) => { if (!open) setSelected(null); }}>
+      {unlocked ? <Dialog open={Boolean(selected)} onOpenChange={(open) => { if (!open) { setSelected(null); setDeleteConfirming(false); setDeleteError(null); } }}>
         <DialogContent className="cheese-lightbox max-h-[calc(100vh-2rem)] max-w-5xl overflow-auto bg-[#0e2321] p-3 text-white sm:p-4">
           {selected ? (
             <>
@@ -653,10 +1007,18 @@ export function CheeseSaver() {
                 <span>{formatBytes(selected.byteSize)}</span>
                 {selected.latitude !== null ? <span className="flex items-center gap-1"><MapPinned className="size-3.5" /> Saved on the tour map</span> : null}
               </div>
+              <div className="cheese-delete-panel">
+                {deleteConfirming ? <p><strong>Delete this memory permanently?</strong><span>This removes it from the gallery, map, and downloads.</span></p> : <p><span>Uploaded by mistake?</span></p>}
+                <Button type="button" variant="destructive" disabled={deleting} onClick={() => void deleteSelected()} className="border border-red-300/20 bg-red-500/15 text-red-100 hover:bg-red-500/25">
+                  {deleting ? <LoaderCircle className="animate-spin" /> : <Trash2 />}
+                  {deleting ? 'Deleting' : deleteConfirming ? 'Confirm delete' : 'Delete memory'}
+                </Button>
+              </div>
+              {deleteError ? <p className="cheese-error" role="alert"><CircleAlert className="size-4 shrink-0" />{deleteError}</p> : null}
             </>
           ) : null}
         </DialogContent>
-      </Dialog>
+      </Dialog> : null}
     </main>
   );
 }

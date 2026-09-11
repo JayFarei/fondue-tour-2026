@@ -12,11 +12,11 @@ type ZipEntry = ZipSource & {
   filename: Uint8Array;
   dosDate: number;
   dosTime: number;
+  localOffset: number;
 };
 
 type CentralEntry = ZipEntry & {
   crc32: number;
-  localOffset: number;
 };
 
 const crcTable = new Uint32Array(256);
@@ -109,11 +109,23 @@ function dataDescriptor(crc32: number, size: number) {
   });
 }
 
+function zip64OffsetExtra(offset: number) {
+  return zipBytes(12, (view) => {
+    view.setUint16(0, 0x0001, true);
+    view.setUint16(2, 8, true);
+    view.setBigUint64(4, BigInt(offset), true);
+  });
+}
+
 function centralHeader(entry: CentralEntry) {
+  const zip64Extra =
+    entry.localOffset >= ZIP_32_LIMIT
+      ? zip64OffsetExtra(entry.localOffset)
+      : new Uint8Array();
   const header = zipBytes(46, (view) => {
     view.setUint32(0, 0x02014b50, true);
-    view.setUint16(4, 20, true);
-    view.setUint16(6, 20, true);
+    view.setUint16(4, zip64Extra.length ? 45 : 20, true);
+    view.setUint16(6, zip64Extra.length ? 45 : 20, true);
     view.setUint16(8, 0x0808, true);
     view.setUint16(10, 0, true);
     view.setUint16(12, entry.dosTime, true);
@@ -122,11 +134,19 @@ function centralHeader(entry: CentralEntry) {
     view.setUint32(20, entry.size, true);
     view.setUint32(24, entry.size, true);
     view.setUint16(28, entry.filename.length, true);
-    view.setUint32(42, entry.localOffset, true);
+    view.setUint16(30, zip64Extra.length, true);
+    view.setUint32(
+      42,
+      zip64Extra.length ? ZIP_32_LIMIT : entry.localOffset,
+      true,
+    );
   });
-  const bytes = new Uint8Array(header.length + entry.filename.length);
+  const bytes = new Uint8Array(
+    header.length + entry.filename.length + zip64Extra.length,
+  );
   bytes.set(header);
   bytes.set(entry.filename, header.length);
+  bytes.set(zip64Extra, header.length + entry.filename.length);
   return bytes;
 }
 
@@ -134,14 +154,39 @@ function endOfCentralDirectory(
   entryCount: number,
   centralSize: number,
   centralOffset: number,
+  zip64: boolean,
 ) {
-  return zipBytes(22, (view) => {
+  const standard = zipBytes(22, (view) => {
     view.setUint32(0, 0x06054b50, true);
-    view.setUint16(8, entryCount, true);
-    view.setUint16(10, entryCount, true);
-    view.setUint32(12, centralSize, true);
-    view.setUint32(16, centralOffset, true);
+    view.setUint16(8, zip64 ? 0xffff : entryCount, true);
+    view.setUint16(10, zip64 ? 0xffff : entryCount, true);
+    view.setUint32(12, zip64 ? ZIP_32_LIMIT : centralSize, true);
+    view.setUint32(16, zip64 ? ZIP_32_LIMIT : centralOffset, true);
   });
+  if (!zip64) return standard;
+
+  const zip64Record = zipBytes(56, (view) => {
+    view.setUint32(0, 0x06064b50, true);
+    view.setBigUint64(4, BigInt(44), true);
+    view.setUint16(12, 45, true);
+    view.setUint16(14, 45, true);
+    view.setBigUint64(24, BigInt(entryCount), true);
+    view.setBigUint64(32, BigInt(entryCount), true);
+    view.setBigUint64(40, BigInt(centralSize), true);
+    view.setBigUint64(48, BigInt(centralOffset), true);
+  });
+  const locator = zipBytes(20, (view) => {
+    view.setUint32(0, 0x07064b50, true);
+    view.setBigUint64(8, BigInt(centralOffset + centralSize), true);
+    view.setUint32(16, 1, true);
+  });
+  const bytes = new Uint8Array(
+    zip64Record.length + locator.length + standard.length,
+  );
+  bytes.set(zip64Record);
+  bytes.set(locator, zip64Record.length);
+  bytes.set(standard, zip64Record.length + locator.length);
+  return bytes;
 }
 
 function streamFrom(iterator: AsyncGenerator<Uint8Array>) {
@@ -164,36 +209,45 @@ function streamFrom(iterator: AsyncGenerator<Uint8Array>) {
 export function createZipArchive(sources: ZipSource[]) {
   if (sources.length > 0xffff) throw new Error('ARCHIVE_TOO_LARGE');
   const used = new Set<string>();
+  let localSize = 0;
   const entries = sources.map((source) => {
     if (
       !Number.isSafeInteger(source.size) ||
       source.size < 0 ||
-      source.size > ZIP_32_LIMIT
+      source.size >= ZIP_32_LIMIT
     )
       throw new Error('ARCHIVE_TOO_LARGE');
     const filename = encoder.encode(uniqueFilename(source.name, used));
     if (filename.length > 0xffff) throw new Error('ARCHIVE_TOO_LARGE');
-    return { ...source, filename, ...zipDate(source.modifiedAt) };
+    const entry = {
+      ...source,
+      filename,
+      ...zipDate(source.modifiedAt),
+      localOffset: localSize,
+    };
+    localSize += 30 + filename.length + source.size + 16;
+    return entry;
   });
-  const contentLength = entries.reduce(
+  const centralSize = entries.reduce(
     (total, entry) =>
       total +
-      30 +
-      entry.filename.length +
-      entry.size +
-      16 +
       46 +
-      entry.filename.length,
-    22,
+      entry.filename.length +
+      (entry.localOffset >= ZIP_32_LIMIT ? 12 : 0),
+    0,
   );
-  if (contentLength > ZIP_32_LIMIT) throw new Error('ARCHIVE_TOO_LARGE');
+  const usesZip64 =
+    entries.length >= 0xffff ||
+    localSize >= ZIP_32_LIMIT ||
+    centralSize >= ZIP_32_LIMIT;
+  const contentLength = localSize + centralSize + (usesZip64 ? 98 : 22);
+  if (!Number.isSafeInteger(contentLength)) throw new Error('ARCHIVE_TOO_LARGE');
 
   async function* chunks() {
     const centralEntries: CentralEntry[] = [];
     let offset = 0;
     for (const entry of entries) {
       const local = localHeader(entry);
-      const localOffset = offset;
       yield local;
       offset += local.length;
 
@@ -219,7 +273,7 @@ export function createZipArchive(sources: ZipSource[]) {
       const descriptor = dataDescriptor(crc32, size);
       yield descriptor;
       offset += size + descriptor.length;
-      centralEntries.push({ ...entry, crc32, localOffset });
+      centralEntries.push({ ...entry, crc32 });
     }
 
     const centralOffset = offset;
@@ -232,6 +286,7 @@ export function createZipArchive(sources: ZipSource[]) {
       centralEntries.length,
       offset - centralOffset,
       centralOffset,
+      usesZip64,
     );
   }
 

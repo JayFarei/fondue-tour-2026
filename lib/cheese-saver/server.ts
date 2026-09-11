@@ -142,6 +142,20 @@ export async function recordRateLimit(scope: string, subject: string, now: numbe
   ).bind(scope, subject, now, windowSeconds, windowSeconds).run();
 }
 
+export async function consumeRateLimit(request: Request, scope: string, maximum: number, windowSeconds: number) {
+  const subject = await subjectHash(request);
+  const now = Math.floor(Date.now() / 1000);
+  const row = await bindings().DB.prepare(
+    `INSERT INTO cheese_rate_limits (scope, subject_hash, window_start, attempts)
+     VALUES (?, ?, ?, 1)
+     ON CONFLICT(scope, subject_hash) DO UPDATE SET
+       attempts = CASE WHEN excluded.window_start - cheese_rate_limits.window_start >= ? THEN 1 ELSE cheese_rate_limits.attempts + 1 END,
+       window_start = CASE WHEN excluded.window_start - cheese_rate_limits.window_start >= ? THEN excluded.window_start ELSE cheese_rate_limits.window_start END
+     RETURNING attempts`,
+  ).bind(scope, subject, now, windowSeconds, windowSeconds).first<{ attempts: number }>();
+  return { blocked: !row || row.attempts > maximum };
+}
+
 export async function clearRateLimit(scope: string, subject: string) {
   await bindings().DB.prepare(
     'DELETE FROM cheese_rate_limits WHERE scope = ? AND subject_hash = ?',

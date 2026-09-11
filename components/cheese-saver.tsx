@@ -462,16 +462,14 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
       uploadIds.add(draft.uploadId);
       return true;
     });
-    const retained = unique.slice(0, Math.max(0, 20 - drafts.length));
-    for (const skipped of unique.slice(retained.length)) URL.revokeObjectURL(skipped.previewUrl);
-    setDrafts((current) => [...current, ...retained].slice(0, 20));
-    if (retained.length) {
-      setNotice(`${retained.length} ${retained.length === 1 ? 'item is' : 'items are'} selected and ready to upload.`);
+    setDrafts((current) => [...current, ...unique]);
+    if (unique.length) {
+      setNotice(`${unique.length} ${unique.length === 1 ? 'item is' : 'items are'} selected and ready to upload.`);
     }
-    if (retained.length !== files.length) {
-      setNotice(retained.length
-        ? `${retained.length} selected. Some files were skipped because they were unsupported, already selected, or exceeded the 20-item limit.`
-        : 'No more files were added. They were unsupported, already selected, or the 20-item limit is full.');
+    if (unique.length !== files.length) {
+      setNotice(unique.length
+        ? `${unique.length} selected. Some files were skipped because they were unsupported or already selected.`
+        : 'No files were added. They were unsupported or already selected.');
     }
     setPreparing(false);
     if (input.current) input.current.value = '';
@@ -589,7 +587,7 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
         />
         <div className="cheese-upload-icon"><Upload className="size-7" /></div>
         <h2 className="text-xl font-bold">Add tour memories</h2>
-        <p className="mt-2 text-sm leading-6 text-muted-foreground">Choose up to 20 photos or videos. Embedded photo locations are detected on your device before upload.</p>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">Choose photos or videos. Embedded photo locations are detected on your device before upload.</p>
         <Button type="button" onClick={() => input.current?.click()} disabled={preparing || uploading} className="mt-5 h-11 rounded-xl bg-[#d9572b] px-5 hover:bg-[#bd4420]">
           {preparing ? <LoaderCircle className="animate-spin" /> : <Images />} Choose photos or videos
         </Button>

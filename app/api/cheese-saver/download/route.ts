@@ -30,15 +30,20 @@ export async function GET(request: Request) {
     .all<DownloadRow>();
 
   try {
-    const archive = createZipArchive(
-      rows.results.map((item) => ({
+    const sources = [];
+    for (const item of rows.results) {
+      const stored = await bindings().MEDIA.head(item.objectKey);
+      if (!stored || stored.size !== item.byteSize)
+        throw new Error('ARCHIVE_SOURCE_INVALID');
+      sources.push({
         name: item.originalName,
         size: item.byteSize,
         modifiedAt: item.capturedAt || item.uploadedAt,
         open: async () =>
           (await bindings().MEDIA.get(item.objectKey))?.body ?? null,
-      })),
-    );
+      });
+    }
+    const archive = createZipArchive(sources);
     const date = new Date().toISOString().slice(0, 10);
     return new Response(archive.body, {
       headers: {

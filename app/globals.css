@@ -392,6 +392,26 @@ body { --font-display: var(--font-barlow), 'Barlow Condensed', 'Arial Narrow', s
   font-weight: 600;
 }
 
+.cheese-download-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+
+.cheese-download-actions > * {
+  flex: 1 1 auto;
+}
+
+.cheese-download-actions [aria-disabled='true'] {
+  pointer-events: none;
+  opacity: .5;
+}
+
+@media (min-width: 640px) {
+  .cheese-download-actions { justify-content: flex-end; }
+  .cheese-download-actions > * { flex: 0 0 auto; }
+}
+
 .cheese-tabs {
   display: grid;
   width: 100%;

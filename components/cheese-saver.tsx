@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import {
+  Archive,
   ArrowLeft,
   Camera,
   Check,
@@ -16,10 +17,11 @@ import {
   MapPinned,
   Navigation,
   ShieldCheck,
+  Share2,
   Upload,
   X,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -27,6 +29,7 @@ import { assetPath } from '@/lib/asset-path';
 import { CheeseSaverMap, type GalleryMedia } from '@/components/cheese-saver-map';
 
 type View = 'gallery' | 'map' | 'upload';
+type ShareState = 'idle' | 'preparing' | 'ready' | 'sharing';
 type Draft = {
   id: string;
   file: File;
@@ -49,6 +52,7 @@ const supportedTypes = new Set([
   'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif',
   'video/mp4', 'video/quicktime', 'video/webm',
 ]);
+const maximumPhotoShareBytes = 250 * 1024 * 1024;
 
 const typeByExtension: Record<string, string> = {
   jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif',
@@ -434,6 +438,19 @@ export function CheeseSaver() {
   const [loadingMedia, setLoadingMedia] = useState(false);
   const [galleryError, setGalleryError] = useState<string | null>(null);
   const [selected, setSelected] = useState<GalleryMedia | null>(null);
+  const [shareState, setShareState] = useState<ShareState>('idle');
+  const [shareProgress, setShareProgress] = useState(0);
+  const [downloadNotice, setDownloadNotice] = useState<string | null>(null);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+  const preparedShareFiles = useRef<File[]>([]);
+
+  const resetDownloadPreparation = useCallback(() => {
+    preparedShareFiles.current = [];
+    setShareState('idle');
+    setShareProgress(0);
+    setDownloadNotice(null);
+    setDownloadError(null);
+  }, []);
 
   const loadMedia = useCallback(async () => {
     setLoadingMedia(true);
@@ -442,17 +459,19 @@ export function CheeseSaver() {
       const response = await fetch('/api/cheese-saver/media', { cache: 'no-store' });
       if (response.status === 401) {
         setUnlocked(false);
+        resetDownloadPreparation();
         return;
       }
       if (!response.ok) throw new Error('Gallery unavailable');
       const result = await response.json() as { media: GalleryMedia[] };
       setMedia(result.media);
+      resetDownloadPreparation();
     } catch {
       setGalleryError('The gallery could not be loaded. Please try again.');
     } finally {
       setLoadingMedia(false);
     }
-  }, []);
+  }, [resetDownloadPreparation]);
 
   useEffect(() => {
     async function checkSession() {
@@ -474,6 +493,67 @@ export function CheeseSaver() {
   const mappedCount = useMemo(() => media.filter((item) => item.latitude !== null).length, [media]);
   const selectMedia = useCallback((item: GalleryMedia) => setSelected(item), []);
 
+  async function preparePhotoLibraryShare() {
+    setDownloadError(null);
+    setDownloadNotice(null);
+    if (!navigator.share || !navigator.canShare) {
+      setDownloadError('This browser cannot send files to the Photos share sheet. Download the ZIP instead.');
+      return;
+    }
+    const totalBytes = media.reduce((total, item) => total + item.byteSize, 0);
+    if (totalBytes > maximumPhotoShareBytes) {
+      setDownloadError(`This gallery is ${formatBytes(totalBytes)}, which is too large to prepare safely on an iPhone. Download the ZIP instead.`);
+      return;
+    }
+
+    setShareState('preparing');
+    setShareProgress(0);
+    const files: File[] = [];
+    try {
+      for (const [index, item] of media.entries()) {
+        const response = await fetch(mediaUrl(item.id), { cache: 'no-store' });
+        if (response.status === 401) {
+          setUnlocked(false);
+          throw new Error('Cheese Saver locked. Unlock it and try again.');
+        }
+        if (!response.ok) throw new Error(`Could not prepare ${item.originalName}.`);
+        const blob = await response.blob();
+        const modifiedAt = new Date(item.capturedAt || item.uploadedAt).valueOf();
+        files.push(new File([blob], item.originalName.replace(/[\\/]/g, '_'), {
+          type: item.contentType,
+          lastModified: Number.isNaN(modifiedAt) ? Date.now() : modifiedAt,
+        }));
+        setShareProgress(index + 1);
+      }
+      if (!navigator.canShare({ files })) throw new Error('This browser cannot share this combination of photos and videos. Download the ZIP instead.');
+      preparedShareFiles.current = files;
+      setShareState('ready');
+      setDownloadNotice(`${files.length} ${files.length === 1 ? 'item is' : 'items are'} ready. Tap “Open share sheet”, then choose “Save to Photos”.`);
+    } catch (error) {
+      preparedShareFiles.current = [];
+      setShareState('idle');
+      setDownloadError(error instanceof Error ? error.message : 'The gallery could not be prepared for Photos.');
+    }
+  }
+
+  async function openPhotoLibraryShare() {
+    const files = preparedShareFiles.current;
+    if (!files.length) return;
+    setShareState('sharing');
+    setDownloadError(null);
+    try {
+      await navigator.share({ files });
+      preparedShareFiles.current = [];
+      setShareState('idle');
+      setDownloadNotice('The share sheet finished. Items are in Photos if you chose the save option.');
+    } catch (error) {
+      setShareState('ready');
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        setDownloadError('The share sheet could not open. Try again or download the ZIP.');
+      }
+    }
+  }
+
   function changeView(next: string | number) {
     const value = String(next) as View;
     setView(value);
@@ -486,6 +566,7 @@ export function CheeseSaver() {
     await fetch('/api/cheese-saver/logout', { method: 'POST' });
     setUnlocked(false);
     setMedia([]);
+    resetDownloadPreparation();
   }
 
   return (
@@ -510,8 +591,29 @@ export function CheeseSaver() {
         <section className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
           <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
             <div><p className="eyebrow">The shared cheese vault</p><h1 className="display-title">Tour memories</h1><p className="mt-3 text-sm text-muted-foreground">{media.length} saved · {mappedCount} on the route map</p></div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="size-4 text-[#396b67]" /> Password session expires after seven days</div>
+            <div className="space-y-3 sm:text-right">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground sm:justify-end"><ShieldCheck className="size-4 text-[#396b67]" /> Password session expires after seven days</div>
+              <div className="cheese-download-actions">
+                <a href="/api/cheese-saver/download" download className={buttonVariants({ variant: 'outline', size: 'lg', className: 'h-11 rounded-xl bg-white' })} aria-disabled={!media.length} tabIndex={media.length ? undefined : -1} onClick={(event) => { if (!media.length) event.preventDefault(); }}>
+                  <Archive /> Download ZIP
+                </a>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  disabled={!media.length || shareState === 'preparing' || shareState === 'sharing'}
+                  className="h-11 rounded-xl bg-white"
+                  onClick={() => void (shareState === 'ready' ? openPhotoLibraryShare() : preparePhotoLibraryShare())}
+                >
+                  {shareState === 'preparing' || shareState === 'sharing' ? <LoaderCircle className="animate-spin" /> : shareState === 'ready' ? <Share2 /> : <Camera />}
+                  {shareState === 'preparing' ? `Preparing ${shareProgress}/${media.length}` : shareState === 'sharing' ? 'Opening Photos' : shareState === 'ready' ? 'Open share sheet' : 'Save to Photos'}
+                </Button>
+              </div>
+            </div>
           </div>
+
+          {downloadError ? <p className="cheese-error mb-4" role="alert"><CircleAlert className="size-4 shrink-0" />{downloadError}</p> : null}
+          {downloadNotice ? <output className="cheese-notice mb-4 block">{downloadNotice}</output> : null}
 
           <Tabs value={view} onValueChange={changeView}>
             <TabsList className="cheese-tabs" aria-label="Cheese Saver views">

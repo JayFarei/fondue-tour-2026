@@ -41,6 +41,7 @@ import {
 
 type View = 'gallery' | 'map' | 'upload';
 type ShareState = 'idle' | 'preparing' | 'ready' | 'sharing';
+type PreparationBatch = { completed: number; total: number; name: string };
 type Draft = {
   id: string;
   uploadId: string;
@@ -66,6 +67,12 @@ const supportedTypes = new Set([
   'video/mp4', 'video/quicktime', 'video/webm',
 ]);
 const maximumPhotoShareBytes = 250 * 1024 * 1024;
+
+function waitForPaint() {
+  return new Promise<void>((resolve) => {
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+  });
+}
 
 const typeByExtension: Record<string, string> = {
   jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp', gif: 'image/gif',
@@ -445,7 +452,7 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const draftsRef = useRef<Draft[]>([]);
   const [authorId, setAuthorId] = useState<TourerId | null>(null);
-  const [preparing, setPreparing] = useState(false);
+  const [preparationBatch, setPreparationBatch] = useState<PreparationBatch | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadBatch, setUploadBatch] = useState<{ current: number; total: number; name: string } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -468,20 +475,36 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
       setNotice('Choose your tourer before adding photos or videos.');
       return;
     }
-    setPreparing(true);
+    const selectedFiles = Array.from(files);
+    const prepared: Draft[] = [];
+    setPreparationBatch({ completed: 0, total: selectedFiles.length, name: selectedFiles[0].name });
     setNotice(null);
-    const prepared = (await Promise.all(Array.from(files).map(makeDraft))).filter((draft): draft is Draft => Boolean(draft));
-    setDrafts((current) => [...current, ...prepared]);
-    if (prepared.length) {
-      setNotice(`${prepared.length} ${prepared.length === 1 ? 'item is' : 'items are'} selected and ready to upload.`);
+    await waitForPaint();
+
+    try {
+      for (const [index, file] of selectedFiles.entries()) {
+        const draft = await makeDraft(file).catch(() => null);
+        if (draft) prepared.push(draft);
+        const completed = index + 1;
+        setPreparationBatch({
+          completed,
+          total: selectedFiles.length,
+          name: selectedFiles[completed]?.name ?? file.name,
+        });
+      }
+      setDrafts((current) => [...current, ...prepared]);
+      if (prepared.length) {
+        setNotice(`${prepared.length} ${prepared.length === 1 ? 'item is' : 'items are'} selected and ready to upload.`);
+      }
+      if (prepared.length !== selectedFiles.length) {
+        setNotice(prepared.length
+          ? `${prepared.length} selected. Some files were skipped because they could not be read or their formats are unsupported.`
+          : 'No files were added. They could not be read or their formats are unsupported.');
+      }
+    } finally {
+      setPreparationBatch(null);
+      if (input.current) input.current.value = '';
     }
-    if (prepared.length !== files.length) {
-      setNotice(prepared.length
-        ? `${prepared.length} selected. Some files were skipped because their formats are unsupported.`
-        : 'No files were added. Their formats are unsupported.');
-    }
-    setPreparing(false);
-    if (input.current) input.current.value = '';
   }
 
   function updateDraft(id: string, update: Partial<Draft>) {
@@ -586,6 +609,7 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
 
   const pendingCount = drafts.filter((draft) => draft.state === 'ready' || draft.state === 'error').length;
   const savedCount = drafts.filter((draft) => draft.state === 'done').length;
+  const preparing = preparationBatch !== null;
 
   return (
     <div className="cheese-upload-layout">
@@ -623,25 +647,27 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
         <h2 className="mt-1 text-xl font-bold">Add tour memories</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">Choose photos or videos. Embedded photo locations are detected on your device before upload.</p>
         <Button type="button" onClick={() => input.current?.click()} disabled={!authorId || preparing || uploading} className="mt-5 h-11 rounded-xl bg-[#d9572b] px-5 hover:bg-[#bd4420]">
-          {preparing ? <LoaderCircle className="animate-spin" /> : <Images />} Choose photos or videos
+          {preparing ? <LoaderCircle className="animate-spin" /> : <Images />}
+          {preparationBatch ? `Preparing ${preparationBatch.completed} of ${preparationBatch.total}` : 'Choose photos or videos'}
         </Button>
         {!authorId ? <p className="mt-3 text-sm font-semibold text-[#9c3516]">Choose your avatar to continue.</p> : null}
         <p className="mt-4 text-xs leading-5 text-muted-foreground">Images up to 25 MB · videos up to 100 MB · location is optional</p>
       </div>
 
-      {drafts.length ? (
+      {preparing || drafts.length ? (
         <div className="space-y-4">
-          <div className={`cheese-upload-signal ${uploading ? 'is-uploading' : 'is-ready'}`}>
-            <output className="cheese-upload-signal-copy" aria-live="polite">
-              {uploading ? <LoaderCircle className="size-5 shrink-0 animate-spin" /> : <Check className="size-5 shrink-0" />}
+          <div className={`cheese-upload-signal ${preparing ? 'is-preparing' : uploading ? 'is-uploading' : 'is-ready'}`}>
+            <output className="cheese-upload-signal-copy" aria-live="polite" aria-atomic="true">
+              {preparing || uploading ? <LoaderCircle className="size-5 shrink-0 animate-spin" /> : <Check className="size-5 shrink-0" />}
               <span className="min-w-0">
-                <strong>{uploading && uploadBatch ? `Uploading ${uploadBatch.current} of ${uploadBatch.total}` : pendingCount ? `${pendingCount} ready to upload` : `${savedCount} saved to the gallery`}</strong>
-                <span>{uploading && uploadBatch ? uploadBatch.name : pendingCount ? 'Review the previews below, then tap the upload button.' : 'Upload complete. You can remove these confirmations when you are ready.'}</span>
+                <strong>{preparationBatch ? `Preparing ${preparationBatch.completed} of ${preparationBatch.total}` : uploading && uploadBatch ? `Uploading ${uploadBatch.current} of ${uploadBatch.total}` : pendingCount ? `${pendingCount} ready to upload` : `${savedCount} saved to the gallery`}</strong>
+                <span>{preparationBatch ? `Reading ${preparationBatch.name} from this device…` : uploading && uploadBatch ? uploadBatch.name : pendingCount ? 'Review the previews below, then tap the upload button.' : 'Upload complete. You can remove these confirmations when you are ready.'}</span>
+                {preparationBatch ? <progress className="cheese-upload-progress" aria-label="Preparing selected files" max={preparationBatch.total} value={preparationBatch.completed}>{preparationBatch.completed} of {preparationBatch.total}</progress> : null}
               </span>
             </output>
             {uploading ? <button type="button" className="cheese-upload-stop" onClick={cancelUpload}><X />Stop</button> : null}
           </div>
-          <div className="space-y-3">
+          {drafts.length ? <><div className="space-y-3">
             {drafts.map((draft) => (
               <article key={draft.id} className="cheese-draft">
                 <div className="cheese-draft-preview">
@@ -689,7 +715,7 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
           <Button type="button" onClick={() => void uploadAll()} disabled={uploading || !pendingCount || !authorId} className="h-12 w-full rounded-xl bg-[#173230] text-base hover:bg-[#244b48]">
             {uploading ? <LoaderCircle className="animate-spin" /> : pendingCount ? <Upload /> : <Check />}
             {uploading && uploadBatch ? `Uploading ${uploadBatch.current} of ${uploadBatch.total}` : pendingCount ? `Upload ${pendingCount} ${pendingCount === 1 ? 'item' : 'items'}` : 'All selected items saved'}
-          </Button>
+          </Button></> : null}
         </div>
       ) : null}
       {notice ? <p className="cheese-notice">{notice}</p> : null}

@@ -403,7 +403,8 @@ body { --font-display: var(--font-barlow), 'Barlow Condensed', 'Arial Narrow', s
   color: #275d59;
 }
 
-.cheese-upload-signal.is-uploading {
+.cheese-upload-signal.is-uploading,
+.cheese-upload-signal.is-preparing {
   border-color: rgb(217 87 43 / 28%);
   background: rgb(217 87 43 / 9%);
   color: #9c3516;

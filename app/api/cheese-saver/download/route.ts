@@ -1,4 +1,6 @@
 import { createZipArchive } from '@/lib/cheese-saver/zip';
+import { filterGalleryMedia, galleryFilterFromSearchParams, type GalleryFilter } from '@/lib/cheese-saver/filters';
+import type { TourerId } from '@/lib/tourers';
 import {
   apiResponse,
   bindings,
@@ -17,21 +19,23 @@ type DownloadRow = {
   byteSize: number;
   capturedAt: string | null;
   uploadedAt: string;
+  authorId: TourerId | null;
 };
 
-async function prepareArchive() {
+async function prepareArchive(filter: GalleryFilter) {
   const rows = await bindings().DB.prepare(
     `SELECT object_key AS objectKey,
             original_name AS originalName,
             byte_size AS byteSize,
             captured_at AS capturedAt,
-            uploaded_at AS uploadedAt
+            uploaded_at AS uploadedAt,
+            author_id AS authorId
        FROM cheese_media
       ORDER BY COALESCE(captured_at, uploaded_at) ASC, uploaded_at ASC`,
   ).all<DownloadRow>();
 
   const sources = [];
-  for (const item of rows.results) {
+  for (const item of filterGalleryMedia(rows.results, filter)) {
     const stored = await bindings().MEDIA.head(item.objectKey);
     if (!stored || stored.size !== item.byteSize) throw new Error('ARCHIVE_SOURCE_INVALID');
     sources.push({
@@ -68,10 +72,12 @@ function limitResponse() {
 
 export async function HEAD(request: Request) {
   if (!(await requireUnlocked(request))) return unauthorized();
+  const filter = galleryFilterFromSearchParams(new URL(request.url).searchParams);
+  if (!filter) return apiResponse({ error: 'INVALID_FILTER', message: 'That gallery filter is not available.' }, { status: 400 });
   const rate = await consumeRateLimit(request, 'download-preflight', MAXIMUM_PREFLIGHTS_PER_HOUR, DOWNLOAD_WINDOW_SECONDS);
   if (rate.blocked) return limitResponse();
   try {
-    const archive = await prepareArchive();
+    const archive = await prepareArchive(filter);
     return new Response(null, { headers: downloadHeaders(archive.contentLength) });
   } catch (error) {
     return downloadError(error);
@@ -80,10 +86,12 @@ export async function HEAD(request: Request) {
 
 export async function GET(request: Request) {
   if (!(await requireUnlocked(request))) return unauthorized();
+  const filter = galleryFilterFromSearchParams(new URL(request.url).searchParams);
+  if (!filter) return apiResponse({ error: 'INVALID_FILTER', message: 'That gallery filter is not available.' }, { status: 400 });
   const rate = await consumeRateLimit(request, 'download', MAXIMUM_DOWNLOADS_PER_HOUR, DOWNLOAD_WINDOW_SECONDS);
   if (rate.blocked) return limitResponse();
   try {
-    const archive = await prepareArchive();
+    const archive = await prepareArchive(filter);
     return new Response(archive.body, { headers: downloadHeaders(archive.contentLength) });
   } catch (error) {
     return downloadError(error);

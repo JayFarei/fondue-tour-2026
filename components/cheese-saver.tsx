@@ -29,6 +29,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { assetPath } from '@/lib/asset-path';
 import { CheeseSaverMap, type GalleryMedia } from '@/components/cheese-saver-map';
 import { isTourerId, tourerFor, tourers, type TourerId } from '@/lib/tourers';
+import {
+  allGalleryFilter,
+  filterGalleryMedia,
+  galleryFilterSearchParams,
+  mediaDayKey,
+  tourGalleryDayKeys,
+  tourGalleryDays,
+  type GalleryFilter,
+} from '@/lib/cheese-saver/filters';
 
 type View = 'gallery' | 'map' | 'upload';
 type ShareState = 'idle' | 'preparing' | 'ready' | 'sharing';
@@ -238,35 +247,12 @@ function mediaUrl(id: string) {
   return `/api/cheese-saver/media/${id}`;
 }
 
-const tourGalleryDays = [
-  { key: '2026-09-08', label: 'Warm-up', dateLabel: 'Tue 8 Sep' },
-  { key: '2026-09-09', label: 'Day 1', dateLabel: 'Wed 9 Sep' },
-  { key: '2026-09-10', label: 'Day 2', dateLabel: 'Thu 10 Sep' },
-  { key: '2026-09-11', label: 'Day 3', dateLabel: 'Fri 11 Sep' },
-  { key: '2026-09-12', label: 'Day 4', dateLabel: 'Sat 12 Sep' },
-  { key: '2026-09-13', label: 'Day 5', dateLabel: 'Sun 13 Sep' },
-] as const;
-
-const tourDateKeys = new Set<string>(tourGalleryDays.map((day) => day.key));
-const galleryDateFormatter = new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'Europe/Zurich',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
 const galleryShortDateFormatter = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'Europe/Zurich',
   weekday: 'short',
   day: 'numeric',
   month: 'short',
 });
-
-function galleryDateKey(item: GalleryMedia) {
-  const date = new Date(item.capturedAt || item.uploadedAt);
-  if (Number.isNaN(date.valueOf())) return 'other';
-  const parts = Object.fromEntries(galleryDateFormatter.formatToParts(date).map((part) => [part.type, part.value]));
-  return `${parts.year}-${parts.month}-${parts.day}`;
-}
 
 function galleryTimestamp(item: GalleryMedia) {
   const timestamp = new Date(item.capturedAt || item.uploadedAt).valueOf();
@@ -330,9 +316,13 @@ function UnlockPanel({ onUnlocked }: { onUnlocked: () => void }) {
   );
 }
 
-function GalleryPanel({ media, loading, onSelect }: { media: GalleryMedia[]; loading: boolean; onSelect: (item: GalleryMedia) => void }) {
-  const [dayFilter, setDayFilter] = useState('all');
-  const [authorFilter, setAuthorFilter] = useState<TourerId | 'all' | 'unknown'>('all');
+function GalleryPanel({ media, loading, filter, onFilterChange, onSelect }: {
+  media: GalleryMedia[];
+  loading: boolean;
+  filter: GalleryFilter;
+  onFilterChange: (filter: GalleryFilter) => void;
+  onSelect: (item: GalleryMedia) => void;
+}) {
   const sortedMedia = useMemo(() => [...media].sort((left, right) => galleryTimestamp(left) - galleryTimestamp(right)), [media]);
   const authorCounts = useMemo(() => {
     const result = new Map<TourerId | 'unknown', number>();
@@ -342,14 +332,12 @@ function GalleryPanel({ media, loading, onSelect }: { media: GalleryMedia[]; loa
     }
     return result;
   }, [sortedMedia]);
-  const authorMedia = useMemo(() => authorFilter === 'all'
-    ? sortedMedia
-    : sortedMedia.filter((item) => authorFilter === 'unknown' ? !isTourerId(item.authorId) : item.authorId === authorFilter), [authorFilter, sortedMedia]);
+  const authorMedia = useMemo(() => filterGalleryMedia(sortedMedia, { ...filter, day: 'all' }), [filter, sortedMedia]);
   const counts = useMemo(() => {
     const result = new Map<string, number>();
     for (const item of authorMedia) {
-      const key = galleryDateKey(item);
-      const group = tourDateKeys.has(key) ? key : 'other';
+      const key = mediaDayKey(item);
+      const group = tourGalleryDayKeys.has(key) ? key : 'other';
       result.set(group, (result.get(group) ?? 0) + 1);
     }
     return result;
@@ -358,11 +346,11 @@ function GalleryPanel({ media, loading, onSelect }: { media: GalleryMedia[]; loa
   if (loading) return <div className="cheese-empty"><LoaderCircle className="mx-auto size-7 animate-spin" /><p>Loading the cheese vault…</p></div>;
   if (!media.length) return <div className="cheese-empty"><Images className="mx-auto size-8" /><p className="font-semibold">No memories saved yet</p><p className="text-muted-foreground">Upload the first photo or video from the tour.</p></div>;
 
-  const tourGroups = tourGalleryDays.map((day) => ({ ...day, items: authorMedia.filter((item) => galleryDateKey(item) === day.key) }));
-  const otherItems = authorMedia.filter((item) => !tourDateKeys.has(galleryDateKey(item)));
+  const tourGroups = tourGalleryDays.map((day) => ({ ...day, items: authorMedia.filter((item) => mediaDayKey(item) === day.key) }));
+  const otherItems = authorMedia.filter((item) => !tourGalleryDayKeys.has(mediaDayKey(item)));
   const otherItemsByDate = new Map<string, GalleryMedia[]>();
   for (const item of otherItems) {
-    const key = galleryDateKey(item);
+    const key = mediaDayKey(item);
     otherItemsByDate.set(key, [...(otherItemsByDate.get(key) ?? []), item]);
   }
   const chronologicalGroups = [
@@ -374,11 +362,11 @@ function GalleryPanel({ media, loading, onSelect }: { media: GalleryMedia[]; loa
       items,
     })),
   ].filter((group) => group.items.length).sort((left, right) => galleryTimestamp(left.items[0]) - galleryTimestamp(right.items[0]));
-  const visibleGroups = dayFilter === 'all'
+  const visibleGroups = filter.day === 'all'
     ? chronologicalGroups
-    : dayFilter === 'other'
+    : filter.day === 'other'
       ? [{ key: 'other', label: 'Other dates', dateLabel: 'Outside the tour', items: otherItems }]
-      : tourGroups.filter((group) => group.key === dayFilter);
+      : tourGroups.filter((group) => group.key === filter.day);
   const visibleCount = visibleGroups.reduce((total, group) => total + group.items.length, 0);
 
   return (
@@ -386,30 +374,37 @@ function GalleryPanel({ media, loading, onSelect }: { media: GalleryMedia[]; loa
       <div className="cheese-gallery-toolbar">
         <div className="cheese-gallery-filter-stack">
           <div className="cheese-author-filters" aria-label="Filter memories by tourer">
-            <button type="button" className={authorFilter === 'all' ? 'is-active' : ''} aria-pressed={authorFilter === 'all'} onClick={() => setAuthorFilter('all')}>
+            <button type="button" className={filter.author === 'all' ? 'is-active' : ''} aria-pressed={filter.author === 'all'} onClick={() => onFilterChange({ ...filter, author: 'all', excludeAuthor: false })}>
               <span className="cheese-author-all"><Images /></span><strong>Everyone</strong><small>{media.length}</small>
             </button>
             {tourers.map((tourer) => (
-              <button key={tourer.id} type="button" className={authorFilter === tourer.id ? 'is-active' : ''} aria-pressed={authorFilter === tourer.id} onClick={() => setAuthorFilter(tourer.id)}>
+              <button key={tourer.id} type="button" className={filter.author === tourer.id ? 'is-active' : ''} aria-pressed={filter.author === tourer.id} onClick={() => onFilterChange({ ...filter, author: tourer.id })}>
                 <Image src={assetPath(tourer.portrait)} alt="" width={52} height={52} /><strong>{tourer.name}</strong><small>{authorCounts.get(tourer.id) ?? 0}</small>
               </button>
             ))}
             {authorCounts.get('unknown') ? (
-              <button type="button" className={authorFilter === 'unknown' ? 'is-active' : ''} aria-pressed={authorFilter === 'unknown'} onClick={() => setAuthorFilter('unknown')}>
+              <button type="button" className={filter.author === 'unknown' ? 'is-active' : ''} aria-pressed={filter.author === 'unknown'} onClick={() => onFilterChange({ ...filter, author: 'unknown' })}>
                 <span className="cheese-author-all">?</span><strong>Unknown</strong><small>{authorCounts.get('unknown')}</small>
               </button>
             ) : null}
           </div>
+          {filter.author !== 'all' ? (
+            <div className="cheese-author-mode" aria-label="Choose how to apply the tourer filter">
+              <span>{tourerFor(filter.author)?.name ?? 'Unknown author'}</span>
+              <button type="button" className={!filter.excludeAuthor ? 'is-active' : ''} aria-pressed={!filter.excludeAuthor} onClick={() => onFilterChange({ ...filter, excludeAuthor: false })}>Only</button>
+              <button type="button" className={filter.excludeAuthor ? 'is-active' : ''} aria-pressed={filter.excludeAuthor} onClick={() => onFilterChange({ ...filter, excludeAuthor: true })}>Exclude</button>
+            </div>
+          ) : null}
           <div className="cheese-day-filters" aria-label="Filter memories by tour day">
-            <button type="button" className={dayFilter === 'all' ? 'is-active' : ''} aria-pressed={dayFilter === 'all'} onClick={() => setDayFilter('all')}>
+            <button type="button" className={filter.day === 'all' ? 'is-active' : ''} aria-pressed={filter.day === 'all'} onClick={() => onFilterChange({ ...filter, day: 'all' })}>
               <strong>All days</strong><span>{authorMedia.length}</span>
             </button>
             {tourGalleryDays.map((day) => (
-              <button key={day.key} type="button" className={dayFilter === day.key ? 'is-active' : ''} aria-pressed={dayFilter === day.key} onClick={() => setDayFilter(day.key)}>
+              <button key={day.key} type="button" className={filter.day === day.key ? 'is-active' : ''} aria-pressed={filter.day === day.key} onClick={() => onFilterChange({ ...filter, day: day.key })}>
                 <strong>{day.label}</strong><small>{day.dateLabel}</small><span>{counts.get(day.key) ?? 0}</span>
               </button>
             ))}
-            <button type="button" className={dayFilter === 'other' ? 'is-active' : ''} aria-pressed={dayFilter === 'other'} onClick={() => setDayFilter('other')}>
+            <button type="button" className={filter.day === 'other' ? 'is-active' : ''} aria-pressed={filter.day === 'other'} onClick={() => onFilterChange({ ...filter, day: 'other' })}>
               <strong>Other</strong><span>{counts.get('other') ?? 0}</span>
             </button>
           </div>
@@ -735,6 +730,7 @@ export function CheeseSaver() {
     return requested === 'upload' || requested === 'map' ? requested : 'gallery';
   });
   const [media, setMedia] = useState<GalleryMedia[]>([]);
+  const [galleryFilter, setGalleryFilter] = useState<GalleryFilter>(allGalleryFilter);
   const [loadingMedia, setLoadingMedia] = useState(false);
   const [galleryError, setGalleryError] = useState<string | null>(null);
   const [galleryNotice, setGalleryNotice] = useState<string | null>(null);
@@ -763,6 +759,11 @@ export function CheeseSaver() {
     setDownloadNotice(null);
     setDownloadError(null);
   }, []);
+
+  const changeGalleryFilter = useCallback((filter: GalleryFilter) => {
+    setGalleryFilter(filter);
+    resetDownloadPreparation();
+  }, [resetDownloadPreparation]);
 
   const loadMedia = useCallback(async () => {
     setLoadingMedia(true);
@@ -803,6 +804,8 @@ export function CheeseSaver() {
   }, [loadMedia]);
 
   const mappedCount = useMemo(() => media.filter((item) => item.latitude !== null).length, [media]);
+  const exportMedia = useMemo(() => filterGalleryMedia(media, galleryFilter), [galleryFilter, media]);
+  const exportIsFiltered = galleryFilter.day !== 'all' || galleryFilter.author !== 'all';
   const selectedTourer = tourerFor(selected?.authorId);
   const selectMedia = useCallback((item: GalleryMedia) => {
     setSelected(item);
@@ -852,7 +855,9 @@ export function CheeseSaver() {
     setDownloadError(null);
     setDownloadNotice(null);
     try {
-      const response = await fetch('/api/cheese-saver/download', {
+      const search = galleryFilterSearchParams(galleryFilter).toString();
+      const downloadUrl = `/api/cheese-saver/download${search ? `?${search}` : ''}`;
+      const response = await fetch(downloadUrl, {
         method: 'HEAD',
         cache: 'no-store',
         signal: controller.signal,
@@ -871,8 +876,8 @@ export function CheeseSaver() {
         throw new Error(message);
       }
       if (controller.signal.aborted) return;
-      setDownloadNotice('Your ZIP download is starting.');
-      window.location.assign('/api/cheese-saver/download');
+      setDownloadNotice(`Your ${exportIsFiltered ? 'filtered ' : ''}ZIP download is starting.`);
+      window.location.assign(downloadUrl);
     } catch (error) {
       if (controller.signal.aborted) return;
       setDownloadError(error instanceof Error ? error.message : 'The ZIP file could not be prepared.');
@@ -893,7 +898,7 @@ export function CheeseSaver() {
       setDownloadError('This browser cannot send files to the Photos share sheet. Download the ZIP instead.');
       return;
     }
-    const totalBytes = media.reduce((total, item) => total + item.byteSize, 0);
+    const totalBytes = exportMedia.reduce((total, item) => total + item.byteSize, 0);
     if (totalBytes > maximumPhotoShareBytes) {
       setDownloadError(`This gallery is ${formatBytes(totalBytes)}, which is too large to prepare safely on an iPhone. Download the ZIP instead.`);
       return;
@@ -905,7 +910,7 @@ export function CheeseSaver() {
     setShareProgress(0);
     const files: File[] = [];
     try {
-      for (const [index, item] of media.entries()) {
+      for (const [index, item] of exportMedia.entries()) {
         const response = await fetch(mediaUrl(item.id), { cache: 'no-store', signal: controller.signal });
         if (response.status === 401) {
           setUnlocked(false);
@@ -970,6 +975,7 @@ export function CheeseSaver() {
     setSelected(null);
     setDeleteConfirming(false);
     setDeleteError(null);
+    setGalleryFilter(allGalleryFilter);
     resetDownloadPreparation();
   }
 
@@ -994,7 +1000,7 @@ export function CheeseSaver() {
       {!checking && unlocked ? (
         <section className="mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-12">
           <div className="mb-7 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div><p className="eyebrow">The shared cheese vault</p><h1 className="display-title">Tour memories</h1><p className="mt-3 text-sm text-muted-foreground">{media.length} saved · {mappedCount} on the route map</p></div>
+            <div><p className="eyebrow">The shared cheese vault</p><h1 className="display-title">Tour memories</h1><p className="mt-3 text-sm text-muted-foreground">{media.length} saved · {mappedCount} on the route map{exportIsFiltered ? ` · ${exportMedia.length} selected for export` : ''}</p></div>
             <div className="space-y-3 sm:text-right">
               <div className="flex items-center gap-2 text-xs text-muted-foreground sm:justify-end"><ShieldCheck className="size-4 text-[#396b67]" /> Password session expires after seven days</div>
               <div className="cheese-download-actions">
@@ -1002,23 +1008,23 @@ export function CheeseSaver() {
                   type="button"
                   variant="outline"
                   size="lg"
-                  disabled={!media.length || preparingZip}
+                  disabled={!exportMedia.length || preparingZip}
                   className="h-11 rounded-xl bg-white"
                   onClick={() => void downloadZip()}
                 >
                   {preparingZip ? <LoaderCircle className="animate-spin" /> : <Archive />}
-                  {preparingZip ? 'Preparing ZIP' : 'Download ZIP'}
+                  {preparingZip ? 'Preparing ZIP' : exportIsFiltered ? 'Download filtered ZIP' : 'Download ZIP'}
                 </Button>
                 <Button
                   type="button"
                   variant="outline"
                   size="lg"
-                  disabled={!media.length || shareState === 'preparing' || shareState === 'sharing'}
+                  disabled={!exportMedia.length || shareState === 'preparing' || shareState === 'sharing'}
                   className="h-11 rounded-xl bg-white"
                   onClick={() => void (shareState === 'ready' ? openPhotoLibraryShare() : preparePhotoLibraryShare())}
                 >
                   {shareState === 'preparing' || shareState === 'sharing' ? <LoaderCircle className="animate-spin" /> : shareState === 'ready' ? <Share2 /> : <Camera />}
-                  {shareState === 'preparing' ? `Preparing ${shareProgress}/${media.length}` : shareState === 'sharing' ? 'Opening Photos' : shareState === 'ready' ? 'Open share sheet' : 'Save to Photos'}
+                  {shareState === 'preparing' ? `Preparing ${shareProgress}/${exportMedia.length}` : shareState === 'sharing' ? 'Opening Photos' : shareState === 'ready' ? 'Open share sheet' : exportIsFiltered ? 'Save filtered to Photos' : 'Save to Photos'}
                 </Button>
               </div>
             </div>
@@ -1036,7 +1042,7 @@ export function CheeseSaver() {
             </TabsList>
             <TabsContent value="gallery" className="mt-6">
               {galleryError ? <p className="cheese-error mb-4"><CircleAlert className="size-4 shrink-0" />{galleryError}</p> : null}
-              <GalleryPanel media={media} loading={loadingMedia} onSelect={selectMedia} />
+              <GalleryPanel media={media} loading={loadingMedia} filter={galleryFilter} onFilterChange={changeGalleryFilter} onSelect={selectMedia} />
             </TabsContent>
             <TabsContent value="map" className="mt-6"><CheeseSaverMap media={media} onSelect={selectMedia} /></TabsContent>
             <TabsContent value="upload" className="mt-6"><UploadPanel onUploaded={loadMedia} /></TabsContent>

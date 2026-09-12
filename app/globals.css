@@ -546,6 +546,43 @@ body { --font-display: var(--font-barlow), 'Barlow Condensed', 'Arial Narrow', s
 .cheese-author-filters strong { grid-column: 2; grid-row: 1; font-size: .8rem; }
 .cheese-author-filters small { grid-column: 2; grid-row: 2; color: currentColor; font-size: .68rem; opacity: .64; }
 
+.cheese-author-mode {
+  display: flex;
+  width: max-content;
+  max-width: 100%;
+  align-items: center;
+  gap: .25rem;
+  border-radius: 999px;
+  padding: .25rem;
+  background: rgb(23 50 48 / 8%);
+  color: var(--pine-deep);
+}
+
+.cheese-author-mode > span {
+  overflow: hidden;
+  max-width: 10rem;
+  padding: 0 .45rem;
+  font-size: .75rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cheese-author-mode button {
+  min-height: 2rem;
+  border: 0;
+  border-radius: 999px;
+  padding: .35rem .65rem;
+  background: transparent;
+  color: inherit;
+  font-size: .75rem;
+  font-weight: 700;
+}
+
+.cheese-author-mode button:hover { background: rgb(255 255 255 / 72%); }
+.cheese-author-mode button:focus-visible { outline: 3px solid rgb(217 87 43 / 24%); outline-offset: 1px; }
+.cheese-author-mode button.is-active { background: var(--pine-deep); color: white; }
+
 .cheese-day-filters {
   display: flex;
   min-width: 0;

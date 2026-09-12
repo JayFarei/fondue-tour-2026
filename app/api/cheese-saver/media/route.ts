@@ -26,6 +26,8 @@ type UploadMetadata = {
   website?: unknown;
 };
 
+type StoredMediaRecord = MediaRecord & { objectKey: string };
+
 function decodeMetadata(request: Request) {
   const encoded = request.headers.get('x-cheese-metadata');
   if (!encoded || encoded.length > 4_096) throw new Error('INVALID_METADATA');
@@ -61,7 +63,12 @@ const mediaColumns = `id,
   uploaded_at AS uploadedAt`;
 
 function mediaById(id: string) {
-  return bindings().DB.prepare(`SELECT ${mediaColumns} FROM cheese_media WHERE id = ?`).bind(id).first<MediaRecord>();
+  return bindings().DB.prepare(`SELECT object_key AS objectKey, ${mediaColumns} FROM cheese_media WHERE id = ?`).bind(id).first<StoredMediaRecord>();
+}
+
+function publicMediaRecord(stored: StoredMediaRecord) {
+  const { objectKey: _objectKey, ...media } = stored;
+  return media;
 }
 
 export async function GET(request: Request) {
@@ -108,7 +115,7 @@ export async function POST(request: Request) {
     ? metadata.uploadId
     : crypto.randomUUID();
   const existing = await mediaById(uploadId);
-  if (existing) return apiResponse({ media: existing }, { status: 200 });
+  if (existing) return apiResponse({ media: publicMediaRecord(existing) }, { status: 200 });
 
   if (!isTourerId(metadata.authorId)) {
     return apiResponse({ error: 'AUTHOR_REQUIRED', message: 'Choose your tourer before uploading.' }, { status: 400 });
@@ -124,7 +131,7 @@ export async function POST(request: Request) {
 
   const id = uploadId;
   const now = new Date();
-  const objectKey = `cheese-saver/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${id}.${accepted.extension}`;
+  const objectKey = `cheese-saver/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${id}-${crypto.randomUUID()}.${accepted.extension}`;
   const originalName = cleanText(metadata.name, 180) ?? `Fondue Tour ${accepted.kind}`;
 
   try {
@@ -209,7 +216,10 @@ export async function POST(request: Request) {
     }, { status: 201 });
   } catch {
     const committed = await mediaById(id).catch(() => null);
-    if (committed) return apiResponse({ media: committed }, { status: 200 });
+    if (committed) {
+      if (committed.objectKey !== objectKey) await bindings().MEDIA.delete(objectKey).catch(() => undefined);
+      return apiResponse({ media: publicMediaRecord(committed) }, { status: 200 });
+    }
     await bindings().MEDIA.delete(objectKey).catch(() => undefined);
     return apiResponse({ error: 'UPLOAD_FAILED', message: 'The upload did not finish. Please try again.' }, { status: 500 });
   }

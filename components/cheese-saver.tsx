@@ -108,20 +108,6 @@ function dimensionsFor(file: File, kind: 'image' | 'video') {
   });
 }
 
-async function stableUploadId(file: File) {
-  const sampleSize = 1024 * 1024;
-  const fingerprint = new Blob([
-    JSON.stringify({ name: file.name, size: file.size, type: file.type }),
-    file.slice(0, Math.min(file.size, sampleSize)),
-    file.size > sampleSize ? file.slice(Math.max(0, file.size - sampleSize)) : new Blob(),
-  ]);
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', await fingerprint.arrayBuffer()));
-  digest[6] = (digest[6] & 0x0f) | 0x50;
-  digest[8] = (digest[8] & 0x3f) | 0x80;
-  const hex = Array.from(digest.slice(0, 16), (byte) => byte.toString(16).padStart(2, '0')).join('');
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
-}
-
 async function embeddedVideoLocation(file: File) {
   const sampleSize = 2 * 1024 * 1024;
   const slices = [file.slice(0, Math.min(file.size, sampleSize))];
@@ -165,11 +151,10 @@ async function makeDraft(rawFile: File): Promise<Draft | null> {
   }
 
   const dimensions = await dimensionsFor(file, mediaKind);
-  const uploadId = await stableUploadId(file);
   const hasLocation = latitude !== null && longitude !== null;
   return {
     id: crypto.randomUUID(),
-    uploadId,
+    uploadId: crypto.randomUUID(),
     file,
     previewUrl: URL.createObjectURL(file),
     mediaKind,
@@ -486,23 +471,14 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
     setPreparing(true);
     setNotice(null);
     const prepared = (await Promise.all(Array.from(files).map(makeDraft))).filter((draft): draft is Draft => Boolean(draft));
-    const uploadIds = new Set(drafts.map((draft) => draft.uploadId));
-    const unique = prepared.filter((draft) => {
-      if (uploadIds.has(draft.uploadId)) {
-        URL.revokeObjectURL(draft.previewUrl);
-        return false;
-      }
-      uploadIds.add(draft.uploadId);
-      return true;
-    });
-    setDrafts((current) => [...current, ...unique]);
-    if (unique.length) {
-      setNotice(`${unique.length} ${unique.length === 1 ? 'item is' : 'items are'} selected and ready to upload.`);
+    setDrafts((current) => [...current, ...prepared]);
+    if (prepared.length) {
+      setNotice(`${prepared.length} ${prepared.length === 1 ? 'item is' : 'items are'} selected and ready to upload.`);
     }
-    if (unique.length !== files.length) {
-      setNotice(unique.length
-        ? `${unique.length} selected. Some files were skipped because they were unsupported or already selected.`
-        : 'No files were added. They were unsupported or already selected.');
+    if (prepared.length !== files.length) {
+      setNotice(prepared.length
+        ? `${prepared.length} selected. Some files were skipped because their formats are unsupported.`
+        : 'No files were added. Their formats are unsupported.');
     }
     setPreparing(false);
     if (input.current) input.current.value = '';
@@ -869,9 +845,11 @@ export function CheeseSaver() {
       }
       if (!response.ok) {
         const message = response.status === 413
-          ? 'The full gallery is too large for one ZIP file.'
+          ? exportIsFiltered
+            ? 'The filtered selection is too large for one ZIP file.'
+            : 'The full gallery is too large for one ZIP file.'
           : response.status === 429
-            ? 'Too many full-gallery downloads. Try again later.'
+            ? 'Too many ZIP downloads. Try again later.'
             : 'The ZIP file could not be prepared.';
         throw new Error(message);
       }
@@ -900,7 +878,7 @@ export function CheeseSaver() {
     }
     const totalBytes = exportMedia.reduce((total, item) => total + item.byteSize, 0);
     if (totalBytes > maximumPhotoShareBytes) {
-      setDownloadError(`This gallery is ${formatBytes(totalBytes)}, which is too large to prepare safely on an iPhone. Download the ZIP instead.`);
+      setDownloadError(`This ${exportIsFiltered ? 'filtered selection' : 'gallery'} is ${formatBytes(totalBytes)}, which is too large to prepare safely on an iPhone. Download the ZIP instead.`);
       return;
     }
 

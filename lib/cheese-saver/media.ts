@@ -1,3 +1,5 @@
+import type { TourerId } from '@/lib/tourers';
+
 export const mediaTypes = {
   'image/jpeg': { kind: 'image', extension: 'jpg', maximum: 25 * 1024 * 1024 },
   'image/png': { kind: 'image', extension: 'png', maximum: 25 * 1024 * 1024 },
@@ -27,6 +29,7 @@ export type MediaRecord = {
   locationSource: 'embedded' | 'device' | null;
   caption: string | null;
   credit: string | null;
+  authorId: TourerId | null;
   uploadedAt: string;
 };
 

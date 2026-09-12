@@ -18,6 +18,7 @@ export const cheeseMedia = sqliteTable(
     locationSource: text('location_source', { enum: ['embedded', 'device'] }),
     caption: text('caption'),
     credit: text('credit'),
+    authorId: text('author_id', { enum: ['marco', 'aris', 'si', 'adrien', 'gabriele', 'henry'] }),
     uploadedAt: text('uploaded_at').notNull(),
   },
   (table) => [

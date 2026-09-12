@@ -30,6 +30,7 @@ import routePlans from '@/data/tour-routes.json';
 import { directionsUrl, routeParts } from '@/lib/navigation';
 import { StopWeather } from '@/components/stop-weather';
 import { extraWeatherLocations, type WeatherLocation } from '@/lib/weather';
+import { tourers } from '@/lib/tourers';
 
 // The page has no request-time data, so it can be emitted as pure HTML. This lets
 // the same source produce a static export for GitHub Pages.
@@ -269,15 +270,6 @@ const approaches = [
     href: routeButtons('wednesday-group', 0, 6, 'Group morning')[0].href,
     accent: '#a93e2b',
   },
-];
-
-const tourers = [
-  { name: 'Marco', portrait: '/brand/profiles/marco.webp', power: 'Cheese Saber', accent: '#f3bf2b' },
-  { name: 'Aris', portrait: '/brand/profiles/aris.webp', power: 'Fondue Forks', accent: '#4f81d9' },
-  { name: 'Si', portrait: '/brand/profiles/simon.webp', power: 'Molten Shield', accent: '#dc6837' },
-  { name: 'Adrien', portrait: '/brand/profiles/adrien.webp', power: 'Raclette Edge', accent: '#83a77f' },
-  { name: 'Gabriele', portrait: '/brand/profiles/gabriele.webp', power: 'Alpine Reactor', accent: '#3ca6a0' },
-  { name: 'Henry', portrait: '/brand/profiles/henry.webp', power: 'Steam Lance', accent: '#c3ced6' },
 ];
 
 // Distances and mapped driving times come from the generated OSRM route files in public/routes.

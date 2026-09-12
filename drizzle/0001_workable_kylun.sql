@@ -1,0 +1,1 @@
+ALTER TABLE `cheese_media` ADD `author_id` text;

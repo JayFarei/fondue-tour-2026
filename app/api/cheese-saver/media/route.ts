@@ -1,17 +1,13 @@
 import { cleanText, finiteNumber, hasExpectedSignature, mediaTypes, type AcceptedMediaType } from '@/lib/cheese-saver/media';
+import { isTourerId } from '@/lib/tourers';
 import {
   apiResponse,
   bindings,
-  rateLimitStatus,
-  recordRateLimit,
   requireUnlocked,
   sameOrigin,
   unauthorized,
   type MediaRecord,
 } from '@/lib/cheese-saver/server';
-
-const MAXIMUM_UPLOADS_PER_HOUR = 60;
-const UPLOAD_WINDOW_SECONDS = 60 * 60;
 
 type UploadMetadata = {
   uploadId?: unknown;
@@ -26,6 +22,7 @@ type UploadMetadata = {
   locationSource?: unknown;
   caption?: unknown;
   credit?: unknown;
+  authorId?: unknown;
   website?: unknown;
 };
 
@@ -60,6 +57,7 @@ const mediaColumns = `id,
   location_source AS locationSource,
   caption,
   credit,
+  author_id AS authorId,
   uploaded_at AS uploadedAt`;
 
 function mediaById(id: string) {
@@ -112,6 +110,10 @@ export async function POST(request: Request) {
   const existing = await mediaById(uploadId);
   if (existing) return apiResponse({ media: existing }, { status: 200 });
 
+  if (!isTourerId(metadata.authorId)) {
+    return apiResponse({ error: 'AUTHOR_REQUIRED', message: 'Choose your tourer before uploading.' }, { status: 400 });
+  }
+
   const contentLengthHeader = request.headers.get('content-length');
   if (contentLengthHeader !== null) {
     const contentLength = wholeNumber(Number(contentLengthHeader), Number.MAX_SAFE_INTEGER);
@@ -119,12 +121,6 @@ export async function POST(request: Request) {
       return apiResponse({ error: 'SIZE_MISMATCH', message: 'The selected file size did not match the upload.' }, { status: 400 });
     }
   }
-
-  const rate = await rateLimitStatus(request, 'upload', MAXIMUM_UPLOADS_PER_HOUR, UPLOAD_WINDOW_SECONDS);
-  if (rate.blocked) {
-    return apiResponse({ error: 'UPLOAD_LIMIT', message: 'This device has reached the hourly upload limit.' }, { status: 429 });
-  }
-  await recordRateLimit('upload', rate.subject, rate.now, UPLOAD_WINDOW_SECONDS);
 
   const id = uploadId;
   const now = new Date();
@@ -163,13 +159,14 @@ export async function POST(request: Request) {
     const durationSeconds = finiteNumber(metadata.durationSeconds, 0, 24 * 60 * 60);
     const caption = cleanText(metadata.caption, 280);
     const credit = cleanText(metadata.credit, 80);
+    const authorId = metadata.authorId;
 
     await bindings().DB.prepare(
       `INSERT INTO cheese_media (
         id, object_key, original_name, media_kind, content_type, byte_size,
         width, height, duration_seconds, captured_at, latitude, longitude,
-        location_source, caption, credit, uploaded_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        location_source, caption, credit, author_id, uploaded_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     ).bind(
       id,
       objectKey,
@@ -186,6 +183,7 @@ export async function POST(request: Request) {
       locationSource,
       caption,
       credit,
+      authorId,
       uploadedAt,
     ).run();
 
@@ -205,6 +203,7 @@ export async function POST(request: Request) {
         locationSource,
         caption,
         credit,
+        authorId,
         uploadedAt,
       } satisfies MediaRecord,
     }, { status: 201 });

@@ -1,4 +1,5 @@
 import { apiResponse, bindings, requireUnlocked, sameOrigin, unauthorized } from '@/lib/cheese-saver/server';
+import type { TourerId } from '@/lib/tourers';
 
 type MediaLocation = {
   id: string;
@@ -16,6 +17,7 @@ type MediaLocation = {
   locationSource: string | null;
   caption: string | null;
   credit: string | null;
+  authorId: TourerId | null;
   uploadedAt: string;
 };
 
@@ -48,7 +50,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
   if (!/^[0-9a-f-]{36}$/i.test(id)) return apiResponse({ error: 'NOT_FOUND' }, { status: 404 });
 
   const media = await bindings().DB.prepare(
-    'SELECT id, object_key AS objectKey, original_name AS originalName, media_kind AS mediaKind, content_type AS contentType, byte_size AS byteSize, width, height, duration_seconds AS durationSeconds, captured_at AS capturedAt, latitude, longitude, location_source AS locationSource, caption, credit, uploaded_at AS uploadedAt FROM cheese_media WHERE id = ?',
+    'SELECT id, object_key AS objectKey, original_name AS originalName, media_kind AS mediaKind, content_type AS contentType, byte_size AS byteSize, width, height, duration_seconds AS durationSeconds, captured_at AS capturedAt, latitude, longitude, location_source AS locationSource, caption, credit, author_id AS authorId, uploaded_at AS uploadedAt FROM cheese_media WHERE id = ?',
   ).bind(id).first<MediaLocation>();
   if (!media) return apiResponse({ error: 'NOT_FOUND' }, { status: 404 });
 
@@ -89,7 +91,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
   if (!/^[0-9a-f-]{36}$/i.test(id)) return apiResponse({ error: 'NOT_FOUND' }, { status: 404 });
 
   const media = await bindings().DB.prepare(
-    'SELECT id, object_key AS objectKey, original_name AS originalName, media_kind AS mediaKind, content_type AS contentType, byte_size AS byteSize, width, height, duration_seconds AS durationSeconds, captured_at AS capturedAt, latitude, longitude, location_source AS locationSource, caption, credit, uploaded_at AS uploadedAt FROM cheese_media WHERE id = ?',
+    'SELECT id, object_key AS objectKey, original_name AS originalName, media_kind AS mediaKind, content_type AS contentType, byte_size AS byteSize, width, height, duration_seconds AS durationSeconds, captured_at AS capturedAt, latitude, longitude, location_source AS locationSource, caption, credit, author_id AS authorId, uploaded_at AS uploadedAt FROM cheese_media WHERE id = ?',
   ).bind(id).first<MediaLocation>();
   if (!media) return apiResponse({ error: 'NOT_FOUND' }, { status: 404 });
 
@@ -102,8 +104,8 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
         `INSERT OR IGNORE INTO cheese_media (
           id, object_key, original_name, media_kind, content_type, byte_size,
           width, height, duration_seconds, captured_at, latitude, longitude,
-          location_source, caption, credit, uploaded_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          location_source, caption, credit, author_id, uploaded_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       ).bind(
         media.id,
         media.objectKey,
@@ -120,6 +122,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
         media.locationSource,
         media.caption,
         media.credit,
+        media.authorId,
         media.uploadedAt,
       ).run();
       throw new Error('OBJECT_DELETE_FAILED');

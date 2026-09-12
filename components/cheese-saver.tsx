@@ -28,6 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { assetPath } from '@/lib/asset-path';
 import { CheeseSaverMap, type GalleryMedia } from '@/components/cheese-saver-map';
+import { isTourerId, tourerFor, tourers, type TourerId } from '@/lib/tourers';
 
 type View = 'gallery' | 'map' | 'upload';
 type ShareState = 'idle' | 'preparing' | 'ready' | 'sharing';
@@ -330,23 +331,35 @@ function UnlockPanel({ onUnlocked }: { onUnlocked: () => void }) {
 }
 
 function GalleryPanel({ media, loading, onSelect }: { media: GalleryMedia[]; loading: boolean; onSelect: (item: GalleryMedia) => void }) {
-  const [filter, setFilter] = useState('all');
+  const [dayFilter, setDayFilter] = useState('all');
+  const [authorFilter, setAuthorFilter] = useState<TourerId | 'all' | 'unknown'>('all');
   const sortedMedia = useMemo(() => [...media].sort((left, right) => galleryTimestamp(left) - galleryTimestamp(right)), [media]);
+  const authorCounts = useMemo(() => {
+    const result = new Map<TourerId | 'unknown', number>();
+    for (const item of sortedMedia) {
+      const key = isTourerId(item.authorId) ? item.authorId : 'unknown';
+      result.set(key, (result.get(key) ?? 0) + 1);
+    }
+    return result;
+  }, [sortedMedia]);
+  const authorMedia = useMemo(() => authorFilter === 'all'
+    ? sortedMedia
+    : sortedMedia.filter((item) => authorFilter === 'unknown' ? !isTourerId(item.authorId) : item.authorId === authorFilter), [authorFilter, sortedMedia]);
   const counts = useMemo(() => {
     const result = new Map<string, number>();
-    for (const item of sortedMedia) {
+    for (const item of authorMedia) {
       const key = galleryDateKey(item);
       const group = tourDateKeys.has(key) ? key : 'other';
       result.set(group, (result.get(group) ?? 0) + 1);
     }
     return result;
-  }, [sortedMedia]);
+  }, [authorMedia]);
 
   if (loading) return <div className="cheese-empty"><LoaderCircle className="mx-auto size-7 animate-spin" /><p>Loading the cheese vault…</p></div>;
   if (!media.length) return <div className="cheese-empty"><Images className="mx-auto size-8" /><p className="font-semibold">No memories saved yet</p><p className="text-muted-foreground">Upload the first photo or video from the tour.</p></div>;
 
-  const tourGroups = tourGalleryDays.map((day) => ({ ...day, items: sortedMedia.filter((item) => galleryDateKey(item) === day.key) }));
-  const otherItems = sortedMedia.filter((item) => !tourDateKeys.has(galleryDateKey(item)));
+  const tourGroups = tourGalleryDays.map((day) => ({ ...day, items: authorMedia.filter((item) => galleryDateKey(item) === day.key) }));
+  const otherItems = authorMedia.filter((item) => !tourDateKeys.has(galleryDateKey(item)));
   const otherItemsByDate = new Map<string, GalleryMedia[]>();
   for (const item of otherItems) {
     const key = galleryDateKey(item);
@@ -361,28 +374,45 @@ function GalleryPanel({ media, loading, onSelect }: { media: GalleryMedia[]; loa
       items,
     })),
   ].filter((group) => group.items.length).sort((left, right) => galleryTimestamp(left.items[0]) - galleryTimestamp(right.items[0]));
-  const visibleGroups = filter === 'all'
+  const visibleGroups = dayFilter === 'all'
     ? chronologicalGroups
-    : filter === 'other'
+    : dayFilter === 'other'
       ? [{ key: 'other', label: 'Other dates', dateLabel: 'Outside the tour', items: otherItems }]
-      : tourGroups.filter((group) => group.key === filter);
+      : tourGroups.filter((group) => group.key === dayFilter);
   const visibleCount = visibleGroups.reduce((total, group) => total + group.items.length, 0);
 
   return (
     <div>
       <div className="cheese-gallery-toolbar">
-        <div className="cheese-day-filters" aria-label="Filter memories by tour day">
-          <button type="button" className={filter === 'all' ? 'is-active' : ''} aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>
-            <strong>All</strong><span>{media.length}</span>
-          </button>
-          {tourGalleryDays.map((day) => (
-            <button key={day.key} type="button" className={filter === day.key ? 'is-active' : ''} aria-pressed={filter === day.key} onClick={() => setFilter(day.key)}>
-              <strong>{day.label}</strong><small>{day.dateLabel}</small><span>{counts.get(day.key) ?? 0}</span>
+        <div className="cheese-gallery-filter-stack">
+          <div className="cheese-author-filters" aria-label="Filter memories by tourer">
+            <button type="button" className={authorFilter === 'all' ? 'is-active' : ''} aria-pressed={authorFilter === 'all'} onClick={() => setAuthorFilter('all')}>
+              <span className="cheese-author-all"><Images /></span><strong>Everyone</strong><small>{media.length}</small>
             </button>
-          ))}
-          <button type="button" className={filter === 'other' ? 'is-active' : ''} aria-pressed={filter === 'other'} onClick={() => setFilter('other')}>
-            <strong>Other</strong><span>{counts.get('other') ?? 0}</span>
-          </button>
+            {tourers.map((tourer) => (
+              <button key={tourer.id} type="button" className={authorFilter === tourer.id ? 'is-active' : ''} aria-pressed={authorFilter === tourer.id} onClick={() => setAuthorFilter(tourer.id)}>
+                <Image src={assetPath(tourer.portrait)} alt="" width={52} height={52} /><strong>{tourer.name}</strong><small>{authorCounts.get(tourer.id) ?? 0}</small>
+              </button>
+            ))}
+            {authorCounts.get('unknown') ? (
+              <button type="button" className={authorFilter === 'unknown' ? 'is-active' : ''} aria-pressed={authorFilter === 'unknown'} onClick={() => setAuthorFilter('unknown')}>
+                <span className="cheese-author-all">?</span><strong>Unknown</strong><small>{authorCounts.get('unknown')}</small>
+              </button>
+            ) : null}
+          </div>
+          <div className="cheese-day-filters" aria-label="Filter memories by tour day">
+            <button type="button" className={dayFilter === 'all' ? 'is-active' : ''} aria-pressed={dayFilter === 'all'} onClick={() => setDayFilter('all')}>
+              <strong>All days</strong><span>{authorMedia.length}</span>
+            </button>
+            {tourGalleryDays.map((day) => (
+              <button key={day.key} type="button" className={dayFilter === day.key ? 'is-active' : ''} aria-pressed={dayFilter === day.key} onClick={() => setDayFilter(day.key)}>
+                <strong>{day.label}</strong><small>{day.dateLabel}</small><span>{counts.get(day.key) ?? 0}</span>
+              </button>
+            ))}
+            <button type="button" className={dayFilter === 'other' ? 'is-active' : ''} aria-pressed={dayFilter === 'other'} onClick={() => setDayFilter('other')}>
+              <strong>Other</strong><span>{counts.get('other') ?? 0}</span>
+            </button>
+          </div>
         </div>
         <p aria-live="polite">{visibleCount} {visibleCount === 1 ? 'memory' : 'memories'} · oldest first</p>
       </div>
@@ -398,8 +428,10 @@ function GalleryPanel({ media, loading, onSelect }: { media: GalleryMedia[]; loa
             </header>
             {group.items.length ? (
               <div className="cheese-gallery">
-                {group.items.map((item) => (
-                  <button key={item.id} type="button" className="cheese-media-card" onClick={() => onSelect(item)} aria-label={`Open ${item.caption || item.originalName}, ${formatDate(item.capturedAt || item.uploadedAt)}`}>
+                {group.items.map((item) => {
+                  const author = tourerFor(item.authorId);
+                  return (
+                  <button key={item.id} type="button" className="cheese-media-card" onClick={() => onSelect(item)} aria-label={`Open ${item.caption || item.originalName}, ${formatDate(item.capturedAt || item.uploadedAt)}${author ? `, by ${author.name}` : ''}`}>
                     <div className="cheese-media-frame">
                       {item.mediaKind === 'image' ? (
                         // eslint-disable-next-line @next/next/no-img-element
@@ -411,11 +443,13 @@ function GalleryPanel({ media, loading, onSelect }: { media: GalleryMedia[]; loa
                       {item.latitude !== null ? <span className="cheese-location-badge"><MapPinned /><span className="sr-only">Mapped</span></span> : null}
                       <span className="cheese-media-copy">
                         <strong>{item.caption || item.originalName}</strong>
-                        <small>{formatDate(item.capturedAt || item.uploadedAt)}{item.credit ? ` · ${item.credit}` : ''}</small>
+                        <small>{formatDate(item.capturedAt || item.uploadedAt)}</small>
+                        {author ? <span className="cheese-media-author"><Image src={assetPath(author.portrait)} alt="" width={28} height={28} />{author.name}</span> : item.credit ? <span className="cheese-media-author is-legacy">{item.credit}</span> : null}
                       </span>
                     </div>
                   </button>
-                ))}
+                  );
+                })}
               </div>
             ) : <div className="cheese-day-empty"><Camera /><span>No memories from this day yet.</span></div>}
           </section>
@@ -430,7 +464,7 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
   const input = useRef<HTMLInputElement>(null);
   const [drafts, setDrafts] = useState<Draft[]>([]);
   const draftsRef = useRef<Draft[]>([]);
-  const [credit, setCredit] = useState('');
+  const [authorId, setAuthorId] = useState<TourerId | null>(null);
   const [preparing, setPreparing] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadBatch, setUploadBatch] = useState<{ current: number; total: number; name: string } | null>(null);
@@ -450,6 +484,10 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
 
   async function addFiles(files: FileList | null) {
     if (!files?.length) return;
+    if (!authorId) {
+      setNotice('Choose your tourer before adding photos or videos.');
+      return;
+    }
     setPreparing(true);
     setNotice(null);
     const prepared = (await Promise.all(Array.from(files).map(makeDraft))).filter((draft): draft is Draft => Boolean(draft));
@@ -508,6 +546,10 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
   async function uploadAll() {
     const ready = drafts.filter((draft) => draft.state === 'ready' || draft.state === 'error');
     if (!ready.length) return;
+    if (!authorId) {
+      setNotice('Choose your tourer before uploading.');
+      return;
+    }
     setUploading(true);
     setNotice(null);
     cancelRequested.current = false;
@@ -530,7 +572,7 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
         longitude: draft.includeLocation ? draft.longitude : null,
         locationSource: draft.includeLocation ? draft.locationSource : null,
         caption: draft.caption,
-        credit,
+        authorId,
         website: '',
       };
       try {
@@ -582,15 +624,37 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
           type="file"
           accept="image/jpeg,image/png,image/webp,image/gif,image/heic,image/heif,video/mp4,video/quicktime,video/webm"
           multiple
+          disabled={!authorId || preparing || uploading}
           className="sr-only"
           onChange={(event) => void addFiles(event.target.files)}
         />
+        <p className="eyebrow">Step 1</p>
+        <h2 className="mt-1 text-xl font-bold">Who’s uploading?</h2>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">Choose your Fondue Force avatar. It will be saved as the author of this batch.</p>
+        <div className="cheese-author-picker" role="radiogroup" aria-label="Choose the author for this upload">
+          {tourers.map((tourer) => (
+            <label
+              key={tourer.id}
+              className={authorId === tourer.id ? 'is-selected' : ''}
+              style={{ '--tourer-color': tourer.accent } as React.CSSProperties}
+            >
+              <input type="radio" name="cheese-author" value={tourer.id} checked={authorId === tourer.id} onChange={() => setAuthorId(tourer.id)} disabled={uploading} />
+              <Image src={assetPath(tourer.portrait)} alt="" width={112} height={112} />
+              <strong>{tourer.name}</strong>
+              <small>{tourer.power}</small>
+              <span><Check /></span>
+            </label>
+          ))}
+        </div>
+        <div className="cheese-upload-divider" />
         <div className="cheese-upload-icon"><Upload className="size-7" /></div>
-        <h2 className="text-xl font-bold">Add tour memories</h2>
+        <p className="eyebrow">Step 2</p>
+        <h2 className="mt-1 text-xl font-bold">Add tour memories</h2>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">Choose photos or videos. Embedded photo locations are detected on your device before upload.</p>
-        <Button type="button" onClick={() => input.current?.click()} disabled={preparing || uploading} className="mt-5 h-11 rounded-xl bg-[#d9572b] px-5 hover:bg-[#bd4420]">
+        <Button type="button" onClick={() => input.current?.click()} disabled={!authorId || preparing || uploading} className="mt-5 h-11 rounded-xl bg-[#d9572b] px-5 hover:bg-[#bd4420]">
           {preparing ? <LoaderCircle className="animate-spin" /> : <Images />} Choose photos or videos
         </Button>
+        {!authorId ? <p className="mt-3 text-sm font-semibold text-[#9c3516]">Choose your avatar to continue.</p> : null}
         <p className="mt-4 text-xs leading-5 text-muted-foreground">Images up to 25 MB · videos up to 100 MB · location is optional</p>
       </div>
 
@@ -606,10 +670,6 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
             </output>
             {uploading ? <button type="button" className="cheese-upload-stop" onClick={cancelUpload}><X />Stop</button> : null}
           </div>
-          <label className="block" htmlFor="cheese-credit">
-            <span className="mb-2 block text-sm font-semibold">Your name <span className="font-normal text-muted-foreground">(optional)</span></span>
-            <Input id="cheese-credit" value={credit} onChange={(event) => setCredit(event.target.value.slice(0, 80))} placeholder="Who took these?" className="h-11 bg-white" />
-          </label>
           <div className="space-y-3">
             {drafts.map((draft) => (
               <article key={draft.id} className="cheese-draft">
@@ -655,7 +715,7 @@ function UploadPanel({ onUploaded }: { onUploaded: () => Promise<void> }) {
               </article>
             ))}
           </div>
-          <Button type="button" onClick={() => void uploadAll()} disabled={uploading || !pendingCount} className="h-12 w-full rounded-xl bg-[#173230] text-base hover:bg-[#244b48]">
+          <Button type="button" onClick={() => void uploadAll()} disabled={uploading || !pendingCount || !authorId} className="h-12 w-full rounded-xl bg-[#173230] text-base hover:bg-[#244b48]">
             {uploading ? <LoaderCircle className="animate-spin" /> : pendingCount ? <Upload /> : <Check />}
             {uploading && uploadBatch ? `Uploading ${uploadBatch.current} of ${uploadBatch.total}` : pendingCount ? `Upload ${pendingCount} ${pendingCount === 1 ? 'item' : 'items'}` : 'All selected items saved'}
           </Button>
@@ -743,6 +803,7 @@ export function CheeseSaver() {
   }, [loadMedia]);
 
   const mappedCount = useMemo(() => media.filter((item) => item.latitude !== null).length, [media]);
+  const selectedTourer = tourerFor(selected?.authorId);
   const selectMedia = useCallback((item: GalleryMedia) => {
     setSelected(item);
     setDeleteConfirming(false);
@@ -989,7 +1050,7 @@ export function CheeseSaver() {
             <>
               <DialogHeader className="pr-10">
                 <DialogTitle className="text-lg text-white">{selected.caption || selected.originalName}</DialogTitle>
-                <DialogDescription className="text-white/55">{formatDate(selected.capturedAt || selected.uploadedAt)}{selected.credit ? ` · ${selected.credit}` : ''}</DialogDescription>
+                <DialogDescription className="text-white/55">{formatDate(selected.capturedAt || selected.uploadedAt)}{selectedTourer ? ` · ${selectedTourer.name}` : selected.credit ? ` · ${selected.credit}` : ''}</DialogDescription>
               </DialogHeader>
               <div className="cheese-lightbox-media">
                 {selected.mediaKind === 'image' ? (
@@ -1003,6 +1064,7 @@ export function CheeseSaver() {
               </div>
               <div className="flex flex-wrap gap-3 text-xs text-white/55">
                 <span>{formatBytes(selected.byteSize)}</span>
+                {selectedTourer ? <span className="cheese-lightbox-author"><Image src={assetPath(selectedTourer.portrait)} alt="" width={28} height={28} /> Photo by {selectedTourer.name}</span> : null}
                 {selected.latitude !== null ? <span className="flex items-center gap-1"><MapPinned className="size-3.5" /> Saved on the tour map</span> : null}
               </div>
               <div className="cheese-delete-panel">
